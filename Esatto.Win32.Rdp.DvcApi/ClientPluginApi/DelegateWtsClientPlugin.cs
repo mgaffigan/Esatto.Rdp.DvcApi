@@ -30,7 +30,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
                 }
                 catch (Exception ex)
                 {
-                    Log($"Failed to create listener for '{chFactory.ChannelName}': {ex}");
+                    DynamicVirtualClientApplication.Log($"Failed to create listener for '{chFactory.ChannelName}': {ex}");
                 }
             }
         }

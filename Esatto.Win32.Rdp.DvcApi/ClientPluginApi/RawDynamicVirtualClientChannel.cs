@@ -8,7 +8,16 @@ using Contract = Esatto.Win32.Com.Contract;
 
 namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 {
-    public sealed class RawDynamicVirtualClientChannel : IDynamicVirtualClientChannel, IDisposable
+    public interface IRawDvcChannel
+    {
+        event EventHandler<CloseReceivedEventArgs> SenderDisconnected;
+        event EventHandler<UnhandledExceptionEventArgs> Exception;
+        event EventHandler<MessageReceivedEventArgs> MessageReceived;
+
+        void SendMessage(byte[] data);
+    }
+
+    public sealed class RawDynamicVirtualClientChannel : IDynamicVirtualClientChannel, IRawDvcChannel, IDisposable
     {
         public string ChannelName { get; }
         private readonly DynamicVirtualChannelWriteCallback writeCallback;

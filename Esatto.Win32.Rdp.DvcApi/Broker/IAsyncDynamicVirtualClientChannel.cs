@@ -24,7 +24,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
     public interface IBrokeredDvcService
     {
         void Ping();
-        IBrokeredDvcChannelServiceInstance AcceptConnection(IBrokeredDvcChannelConnection cleitn);
+        IBrokeredDvcChannelServiceInstance AcceptConnection(IBrokeredDvcChannelConnection client);
     }
 
     [ComVisible(true)]

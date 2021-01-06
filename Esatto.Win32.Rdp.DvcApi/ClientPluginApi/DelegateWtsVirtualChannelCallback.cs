@@ -30,7 +30,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
             catch (Exception ex)
             {
-                Log($"Uncaught exception in ReadMessage for '{Factory.ChannelName}': {ex}");
+                DynamicVirtualClientApplication.Log($"Uncaught exception in ReadMessage for '{Factory.ChannelName}': {ex}");
             }
         }
 

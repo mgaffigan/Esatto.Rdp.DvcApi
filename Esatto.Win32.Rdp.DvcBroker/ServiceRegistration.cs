@@ -2,7 +2,7 @@
 using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using System;
 
-namespace Esatto.Win32.Rdp.DvcBroker
+namespace Esatto.Win32.Rdp.DvcApi.Broker
 {
     internal class ServiceRegistration : IDisposable
     {
@@ -40,7 +40,7 @@ namespace Esatto.Win32.Rdp.DvcBroker
             }
         }
 
-        internal void Dispose()
+        public void Dispose()
         {
             Target = null;
         }

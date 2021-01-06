@@ -11,7 +11,7 @@ namespace TestApp.Raw.OnTerminalServer
     {
         static async Task Main(string[] args)
         {
-            var dvc = DynamicVirtualServerChannel.Open("TEST1"); //"ECHO");
+            var dvc = DynamicVirtualServerChannel.Open("ESBR"); //"ECHO");
             var resp = ReadAsync(dvc);
             while (true)
             {

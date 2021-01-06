@@ -29,7 +29,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
             catch (Exception ex)
             {
-                Log($"Failure while creating client channel for '{Factory.ChannelName}': {ex}");
+                DynamicVirtualClientApplication.Log($"Failure while creating client channel for '{Factory.ChannelName}': {ex}");
 
                 pAccept = false;
                 pCallback = null;

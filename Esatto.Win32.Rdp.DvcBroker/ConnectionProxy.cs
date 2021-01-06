@@ -3,7 +3,7 @@ using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcBroker
+namespace Esatto.Win32.Rdp.DvcApi.Broker
 {
     internal class ConnectionProxy : IDisposable
     {

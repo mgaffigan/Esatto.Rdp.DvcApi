@@ -78,6 +78,8 @@
     <Compile Include="..\externs\Com\StaClassFactory.cs">
       <Link>COM Interop %28Externs%29\StaClassFactory.cs</Link>
     </Compile>
+    <Compile Include="Broker\BrokerConstants.cs" />
+    <Compile Include="Broker\BrokeredServiceRegistration.cs" />
     <Compile Include="ClientPluginApi\AsyncDynamicVirtualClientChannel.cs" />
     <Compile Include="Broker\IAsyncDynamicVirtualClientChannel.cs" />
     <Compile Include="ClientPluginApi\DelegateWtsClientPlugin.cs" />

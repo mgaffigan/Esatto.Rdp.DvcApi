@@ -9,19 +9,21 @@ using static Esatto.Win32.Com.ComInterop;
 
 namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 {
-    sealed class DvcMessageLoop : ApplicationContext
+    public class DvcMessageLoop : ApplicationContext
     {
-        private readonly ClassObjectRegistration CoordinatorRegistration;
-        private const int EventIdStart = 20;
+        private readonly ClassObjectRegistration PluginRegistration;
 
-        public DvcMessageLoop(IDynamicVirtualClientChannelFactory[] channelHosts, Guid clsid)
+        public DvcMessageLoop(IDynamicVirtualClientChannelFactory[] channelHosts, Guid clsid, bool resumeClassObjects = true)
         {
             SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
 
             // register COM objects
-            this.CoordinatorRegistration = new ClassObjectRegistration(clsid,
+            this.PluginRegistration = new ClassObjectRegistration(clsid,
                 CreateClassFactoryFor(() => new DelegateWtsClientPlugin(channelHosts)), CLSCTX.LOCAL_SERVER, REGCLS.MULTIPLEUSE | REGCLS.SUSPENDED);
-            CoResumeClassObjects();
+            if (resumeClassObjects)
+            {
+                CoResumeClassObjects();
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -30,11 +32,11 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 
             if (disposing)
             {
-                this.CoordinatorRegistration.Dispose();
+                this.PluginRegistration.Dispose();
             }
         }
 
-        internal static void Register(Guid wtsPluginClsid, string progid, string startCommand)
+        public static void Register(Guid wtsPluginClsid, string progid, string startCommand)
         {
             var clsid = wtsPluginClsid.ToString("b").ToUpperInvariant();
             using (var hkcr64 = RegistryKey.OpenBaseKey(RegistryHive.ClassesRoot, RegistryView.Registry64))
@@ -55,7 +57,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
         }
 
-        internal static void Unregister(Guid wtsPluginClsid)
+        public static void Unregister(Guid wtsPluginClsid)
         {
             var clsid = wtsPluginClsid.ToString("b").ToUpperInvariant();
 

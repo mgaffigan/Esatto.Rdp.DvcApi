@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcBroker
+namespace Esatto.Win32.Rdp.DvcApi.Broker
 {
     public static class Logger
     {
