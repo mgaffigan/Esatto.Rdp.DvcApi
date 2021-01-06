@@ -1,9 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Esatto.Win32.Rdp.DvcApi", "Esatto.Win32.Rdp.DvcApi\Esatto.Win32.Rdp.DvcApi.csproj", "{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BD378192-5DA9-46FB-983E-2112F3546F08}"
+	ProjectSection(SolutionItems) = preProject
+		Readme.md = Readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test Clients", "Test Clients", "{3A100944-3EFA-4DEB-A97C-42A6299E6B91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp.Raw.OnTerminalServer", "TestApp.Raw.OnTerminalServer\TestApp.Raw.OnTerminalServer.csproj", "{1BAE0D19-047B-48D5-A4E2-A7109C70B166}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp.Raw.OnRdpClient", "TestApp.Raw.OnRdpClient\TestApp.Raw.OnRdpClient.csproj", "{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Esatto.Win32.Rdp.DvcBroker", "Esatto.Win32.Rdp.DvcBroker\Esatto.Win32.Rdp.DvcBroker.csproj", "{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +28,27 @@ Global
 		{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BAE0D19-047B-48D5-A4E2-A7109C70B166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BAE0D19-047B-48D5-A4E2-A7109C70B166}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BAE0D19-047B-48D5-A4E2-A7109C70B166}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BAE0D19-047B-48D5-A4E2-A7109C70B166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1BAE0D19-047B-48D5-A4E2-A7109C70B166} = {3A100944-3EFA-4DEB-A97C-42A6299E6B91}
+		{24665A4C-EDE6-4B9A-9250-BB140AA5F8DB} = {3A100944-3EFA-4DEB-A97C-42A6299E6B91}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {854CD9FA-7EA4-4A26-8D61-D17B13449076}
 	EndGlobalSection
 EndGlobal
