@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension" xmlns:edp="http://esat.to/schema/2012-11-25/Deployment">
+  <Product Id="*" Name="Esatto RDP DVC Broker" Language="1033" Version="1.0.0.0" Manufacturer="In Touch Technologies" UpgradeCode="{5C2092FC-22B2-408E-A883-30EA04C9E84F}">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x86" />
+    <MajorUpgrade AllowDowngrades="yes" />
+    <MediaTemplate EmbedCab="yes" />
+    <Property Id="REINSTALLMODE" Value="amus" />
+    <!-- Hide from ARP -->
+    <Property Id="ARPSYSTEMCOMPONENT" Value="1" />
+    <PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR" />
+    <PropertyRef Id="NETFRAMEWORK45"/>
+    <Condition Message='This setup requires Microsoft .NET Framework 4.5 package or greater needs to be installed for this installation to continue.'>
+      <![CDATA[Installed OR NETFRAMEWORK45]]>
+    </Condition>
+    <Icon Id="EsattoIcon.exe" SourceFile="..\assets\Esatto Logo (ICO, Green, 256x256).ico" />
+    <Property Id="ARPPRODUCTICON" Value="EsattoIcon.exe" />
+    <Feature Id="ProductFeature" Title="All Features" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+  </Product>
+  
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="CompanyFolder" Name="Esatto">
+          <Directory Id="INSTALLFOLDER" Name="RDP DVC Broker" />
+        </Directory>
+      </Directory>
+    </Directory>
+  </Fragment>
+  
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <!-- Shared -->
+      <!-- Esatto.AppCoordination.Common.dll is installed to the GAC via Heat -->
+      <ComponentGroupRef Id="EsattoRdpDvcApi_ComReg" />
+      <ComponentGroupRef Id="EsattoRdpDvcApi_TlbReg" />
+      
+      <!-- Coordinator -->
+      <!-- Esatto.AppCoordination.Coordinator.exe is installed via Heat -->
+      <ComponentGroupRef Id="EsattoRdpDvcBroker_ComReg" />
+      <Component Id="Esatto.Rdp.DvcBroker.config">
+        <File Source="$(var.Esatto.Rdp.DvcBroker.TargetPath).config" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
