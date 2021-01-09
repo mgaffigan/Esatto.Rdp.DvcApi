@@ -78,21 +78,21 @@
     <Compile Include="..\externs\Com\StaClassFactory.cs">
       <Link>COM Interop %28Externs%29\StaClassFactory.cs</Link>
     </Compile>
+    <Compile Include="API Common\TaskExtensions.cs" />
     <Compile Include="Broker\BrokerConstants.cs" />
+    <Compile Include="Broker\BrokeredServiceClient.cs" />
     <Compile Include="Broker\BrokeredServiceRegistration.cs" />
-    <Compile Include="ClientPluginApi\AsyncDynamicVirtualClientChannel.cs" />
-    <Compile Include="Broker\IAsyncDynamicVirtualClientChannel.cs" />
+    <Compile Include="Broker\IDvcChannelBroker.cs" />
+    <Compile Include="API Common\IAsyncDvcChannel.cs" />
+    <Compile Include="ClientPluginApi\MessageQueue.cs" />
     <Compile Include="ClientPluginApi\DelegateWtsClientPlugin.cs" />
     <Compile Include="ClientPluginApi\DelegateWtsListenerCallback.cs" />
-    <Compile Include="ClientPluginApi\DelegateWtsVirtualChannelCallback.cs" />
+    <Compile Include="API Common\DvcChannelDisconnectedException.cs" />
     <Compile Include="ClientPluginApi\DvcMessageLoop.cs" />
     <Compile Include="ClientPluginApi\RawDynamicVirtualClientChannel.cs" />
-    <Compile Include="ClientPluginApi\IDynamicVirtualClientChannel.cs" />
-    <Compile Include="ClientPluginApi\IDynamicVirtualClientChannelFactory.cs" />
-    <Compile Include="ClientPluginApi\WtsClientPlugin.cs" />
     <Compile Include="ClientPluginApi\DynamicVirtualClientApplication.cs" />
     <Compile Include="COM Interop %28Externs%29\Contract.cs" />
-    <Compile Include="SessionHostApi\ChannelNotAvailableException.cs" />
+    <Compile Include="API Common\ChannelNotAvailableException.cs" />
     <Compile Include="SessionHostApi\DynamicVirtualServerChannel.cs" />
     <Compile Include="SessionHostApi\ProtocolViolationException.cs" />
     <Compile Include="TSVirtualChannels\CHANNEL_FLAG.cs" />
@@ -114,12 +114,12 @@
     <Compile Include="WcfDvc\ApmHelpers\TapInterop.cs" />
     <Compile Include="WcfDvc\ApmHelpers\TypedAsyncResult.cs" />
     <Compile Include="WcfDvc\ApmHelpers\TypedCompletedAsyncResult.cs" />
-    <None Include="WcfDvc\DvcBinding.cs" />
-    <None Include="WcfDvc\DvcBindingElement.cs" />
-    <None Include="WcfDvc\DvcChannelFactory.cs" />
-    <None Include="WcfDvc\DvcChannelListener.cs" />
-    <None Include="WcfDvc\DvcClientDuplexSessionChannel.cs" />
-    <None Include="WcfDvc\DvcDuplexSessionChannel.cs" />
+    <Compile Include="WcfDvc\DvcBinding.cs" />
+    <Compile Include="WcfDvc\DvcBindingElement.cs" />
+    <Compile Include="WcfDvc\DvcChannelFactory.cs" />
+    <Compile Include="WcfDvc\DvcChannelListener.cs" />
+    <Compile Include="WcfDvc\DvcClientDuplexSessionChannel.cs" />
+    <Compile Include="WcfDvc\DvcDuplexSessionChannel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\key.snk" />

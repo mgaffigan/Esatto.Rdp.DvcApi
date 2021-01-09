@@ -1,5 +1,7 @@
-﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+﻿using Esatto.Win32.Rdp.DvcApi.Broker;
+using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
@@ -15,7 +17,8 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         private readonly int maxBufferSize;
         BufferManager bufferManager;
         MessageEncoderFactory encoderFactory;
-        IAsyncDynamicVirtualClientChannel listenSocket;
+        BrokeredServiceRegistration serviceRegistration;
+        BlockingCollection<IAsyncDvcChannel> acceptQueue;
         public override Uri Uri { get; }
 
         public DvcChannelListener(DvcBindingElement bindingElement, BindingContext context)
@@ -24,6 +27,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
             // populate members from binding element
             this.maxBufferSize = (int)bindingElement.MaxReceivedMessageSize;
             this.bufferManager = BufferManager.CreateBufferManager(bindingElement.MaxBufferPoolSize, maxBufferSize);
+            this.acceptQueue = new BlockingCollection<IAsyncDvcChannel>();
 
             var messageEncoderBindingElement = context.BindingParameters.OfType<MessageEncodingBindingElement>().SingleOrDefault();
             if (messageEncoderBindingElement != null)
@@ -40,25 +44,24 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
         #region Open / Close
 
-        void OpenListenSocket()
+        protected override void OnOpen(TimeSpan timeout)
         {
-            var localEndpoint = HyperVSocketEndPoint.Parse(this.Uri);
-            this.listenSocket = new Socket(AF_HYPERV, SocketType.Stream, HV_PROTOCOL_RAW);
-            this.listenSocket.Bind(localEndpoint);
-            this.listenSocket.Listen(1);
+            this.serviceRegistration = new BrokeredServiceRegistration(this.Uri.PathAndQuery, o => acceptQueue.Add(o));
         }
-
-        private void CloseListenSocket(TimeSpan timeout) => this.listenSocket.Close(timeout);
-
-        protected override void OnOpen(TimeSpan timeout) => OpenListenSocket();
 
         protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state)
         {
-            OpenListenSocket();
+            OnOpen(timeout);
             return new CompletedAsyncResult(callback, state);
         }
 
         protected override void OnEndOpen(IAsyncResult result) => CompletedAsyncResult.End(result);
+
+        private void CloseListenSocket(TimeSpan timeout)
+        {
+            this.serviceRegistration?.Dispose();
+            this.serviceRegistration = null;
+        }
 
         protected override void OnAbort() => CloseListenSocket(TimeSpan.Zero);
 
@@ -78,24 +81,25 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
         protected override IDuplexSessionChannel OnAcceptChannel(TimeSpan timeout)
         {
-            var dataSocket = listenSocket.Accept();
+            var dataSocket = acceptQueue.Take();
             return new ServerDuplexSessionChannel(this.encoderFactory, this.bufferManager, this.maxBufferSize, dataSocket, new EndpointAddress(Uri), this);
         }
 
         protected override IAsyncResult OnBeginAcceptChannel(TimeSpan timeout, AsyncCallback callback, object state)
         {
-            return Tap.Run(callback, state, async () =>
+            return Tap.Run(callback, state, () => Task.Run(() =>
             {
                 try
                 {
-                    var dataSocket = await listenSocket.AcceptAsync();
-                    return (IDuplexSessionChannel)new ServerDuplexSessionChannel(this.encoderFactory, this.bufferManager, this.maxBufferSize, dataSocket, new EndpointAddress(this.Uri), this);
+                    var dataSocket = acceptQueue.Take();
+                    return (IDuplexSessionChannel)new ServerDuplexSessionChannel(this.encoderFactory, this.bufferManager, 
+                        this.maxBufferSize, dataSocket, new EndpointAddress(this.Uri), this);
                 }
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
                 {
                     return null;
                 }
-            });
+            }));
         }
 
         protected override IDuplexSessionChannel OnEndAcceptChannel(IAsyncResult result) => Tap.Complete<IDuplexSessionChannel>(result);
@@ -118,7 +122,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         class ServerDuplexSessionChannel : DvcDuplexSessionChannel
         {
             public ServerDuplexSessionChannel(MessageEncoderFactory messageEncoderFactory, BufferManager bufferManager, int maxBufferSize,
-                Socket socket, EndpointAddress localAddress, ChannelManagerBase channelManager)
+                IAsyncDvcChannel socket, EndpointAddress localAddress, ChannelManagerBase channelManager)
                 : base(messageEncoderFactory, bufferManager, maxBufferSize, AnonymousAddress, localAddress,
                 AnonymousAddress.Uri, channelManager)
             {

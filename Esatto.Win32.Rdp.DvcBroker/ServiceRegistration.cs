@@ -1,6 +1,8 @@
 ﻿using Esatto.Win32.Rdp.DvcApi.Broker;
 using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using System;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Esatto.Win32.Rdp.DvcApi.Broker
 {
@@ -45,14 +47,34 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
             Target = null;
         }
 
-        internal void AcceptConnection(RawDynamicVirtualClientChannel obj)
+        internal bool TryAcceptConnection(IAsyncDvcChannel connection)
         {
             AssertAlive();
 
-            var connectionProxy = new ConnectionProxy(ServiceName, obj);
+            var connectionProxy = new ConnectionProxy(ServiceName, connection);
             try
             {
                 connectionProxy.SetHandler(Target.AcceptConnection(connectionProxy.CallbackProxy));
+                return true;
+            }
+            catch (COMException ex) when (ex.HResult == unchecked((int)0x800706ba) /* RPC_S_SERVER_UNAVAILABLE */)
+            {
+                // caller needs to ditch this instance
+                try
+                {
+                    connection.SendMessage(Encoding.UTF8.GetBytes("ERROR Service is no longer available"));
+                }
+                catch (OperationCanceledException) { /* no-op */ }
+                catch (ObjectDisposedException) { /* no-op */ }
+                catch (DvcChannelDisconnectedException) { /* no-op */ }
+                catch (Exception ex2)
+                {
+                    Logger.Error(ex2, "Could not notify RDS endpoint of failed conncetion attempt");
+                }
+
+                // this will tear down connection, too.
+                connectionProxy.Dispose();
+                return false;
             }
             catch (Exception ex)
             {
@@ -65,6 +87,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                     Logger.Error(ex2, $"Could not tear down new connection for {ServiceName}");
                 }
                 Logger.Error(ex, $"Could not handle new connection for {ServiceName}");
+                return true;
             }
         }
     }

@@ -22,7 +22,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
         public override string Scheme
         {
-            get { return "hypervnb"; }
+            get { return "esbkdvc"; }
         }
 
         public override IChannelFactory<TChannel> BuildChannelFactory<TChannel>(BindingContext context)
@@ -94,9 +94,9 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
             ICollection<XmlElement> bindingAssertions = context.GetBindingAssertions();
             XmlDocument xmlDocument = new XmlDocument();
-            const string prefix = "hv";
-            const string transportAssertion = "hypervnb";
-            const string tcpPolicyNamespace = "urn:rmg:hyperv:nb";
+            const string prefix = "bk";
+            const string transportAssertion = "esbkdvc";
+            const string tcpPolicyNamespace = "urn:rmg:esbkdvc:nb";
             bindingAssertions.Add(xmlDocument.CreateElement(prefix, transportAssertion, tcpPolicyNamespace));
         }
     }

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,44 +10,24 @@ using Contract = Esatto.Win32.Com.Contract;
 
 namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 {
-    public interface IRawDvcChannel
-    {
-        event EventHandler<CloseReceivedEventArgs> SenderDisconnected;
-        event EventHandler<UnhandledExceptionEventArgs> Exception;
-        event EventHandler<MessageReceivedEventArgs> MessageReceived;
-
-        void SendMessage(byte[] data);
-    }
-
-    public sealed class RawDynamicVirtualClientChannel : IDynamicVirtualClientChannel, IRawDvcChannel, IDisposable
+    // Runs on RDS Client
+    // Wraps COM channel to provide IAsyncDvcChannel
+    internal sealed class RawDynamicVirtualClientChannel : IAsyncDvcChannel, IDisposable
     {
         public string ChannelName { get; }
-        private readonly DynamicVirtualChannelWriteCallback writeCallback;
-        private readonly Action closeCallback;
-        private readonly SynchronizationContext SyncCtx;
+        private readonly DelegateWtsVirtualChannelCallback _Proxy;
+        internal IWTSVirtualChannelCallback Proxy => _Proxy;
+        private readonly MessageQueue ReadQueue;
+
         private bool isDisposed;
+        private bool isDisconnected;
+        public event EventHandler Disconnected;
 
-        public event EventHandler<CloseReceivedEventArgs> SenderDisconnected;
-        public event EventHandler<UnhandledExceptionEventArgs> Exception;
-
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
-
-        private RawDynamicVirtualClientChannel(string channelName, DynamicVirtualChannelWriteCallback writeCallback, Action closeCallback, SynchronizationContext syncCtx)
+        internal RawDynamicVirtualClientChannel(string channelName, IWTSVirtualChannel callback)
         {
+            this.ReadQueue = new MessageQueue();
             this.ChannelName = channelName;
-            this.writeCallback = writeCallback;
-            this.closeCallback = closeCallback;
-            this.SyncCtx = syncCtx;
-        }
-
-        public static IDynamicVirtualClientChannelFactory Create(string channelName, Action<RawDynamicVirtualClientChannel> handleNewChannel)
-            => Create(channelName, handleNewChannel, null);
-        public static IDynamicVirtualClientChannelFactory Create(string channelName, Action<RawDynamicVirtualClientChannel> handleNewChannel, SynchronizationContext syncCtx)
-        {
-            TSVirtualChannels.NativeMethods.ValidateChannelName(channelName);
-            Contract.Requires(handleNewChannel != null);
-
-            return new RawDynamicVirtualClientChannelFactory(channelName, handleNewChannel, syncCtx);
+            this._Proxy = new DelegateWtsVirtualChannelCallback(callback, this);
         }
 
         private void AssertAlive()
@@ -56,100 +38,130 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
         }
 
-        private void RunOnSyncCtx(Action func)
+        public void Dispose()
         {
+            AssertAlive();
+            isDisposed = true;
+
             try
             {
-                if (SyncCtx == null)
-                {
-                    func();
-                }
-                else
-                {
-                    SyncCtx.Post(_1 => func(), null);
-                }
+                // Calls out to client code, could throw.
+                ReadQueue.Dispose();
             }
-            catch (Exception ex)
+            finally
             {
-                this.Exception?.Invoke(this, new UnhandledExceptionEventArgs(ex, false));
+                _Proxy.CloseWriteChannel();
             }
         }
 
-        public void SendMessage(byte[] data)
-        {
-            SendMessage(data, 0, data.Length);
-        }
+        // Sugar
+        public Task SendMessageAsync(byte[] data, int offset, int length) => Task.Run(() => SendMessage(data, offset, length));
+        public byte[] ReadMessage(CancellationToken ct) => ReadMessageAsync(ct).GetResultOrException();
 
         public void SendMessage(byte[] data, int offset, int length)
         {
             AssertAlive();
+            if (isDisconnected)
+            {
+                throw new DvcChannelDisconnectedException();
+            }
 
-            this.writeCallback(data, offset, length);
+            this._Proxy.WriteMessage(data, offset, length);
         }
 
-        void IDisposable.Dispose() => Close();
-
-        public void Close()
+        public Task<byte[]> ReadMessageAsync(CancellationToken ct)
         {
             AssertAlive();
+            if (isDisconnected)
+            {
+                throw new DvcChannelDisconnectedException();
+            }
 
-            isDisposed = true;
-            closeCallback();
+            return ReadQueue.ReadAsync(ct);
         }
 
-        void IDynamicVirtualClientChannel.Close()
+        private sealed class DelegateWtsVirtualChannelCallback : IWTSVirtualChannelCallback
         {
-            RunOnSyncCtx(() =>
+            private IWTSVirtualChannel NativeChannel;
+            public readonly RawDynamicVirtualClientChannel Parent;
+
+            public DelegateWtsVirtualChannelCallback(IWTSVirtualChannel pChannel, RawDynamicVirtualClientChannel parent)
             {
-                var ea = new CloseReceivedEventArgs();
-                SenderDisconnected?.Invoke(this, ea);
-                if (!ea.Handled)
+                this.NativeChannel = pChannel ?? throw new ArgumentNullException(nameof(pChannel));
+                this.Parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
+
+            // Called from COM
+            void IWTSVirtualChannelCallback.OnDataReceived(int cbSize, IntPtr pBuffer)
+            {
+                var data = new byte[cbSize];
+                Marshal.Copy(pBuffer, data, 0, cbSize);
+
+                try
                 {
-                    Close();
+                    if (Parent.isDisposed)
+                    {
+                        return;
+                    }
+
+                    Parent.ReadQueue.WriteMessage(data);
                 }
-            });
-        }
-
-        void IDynamicVirtualClientChannel.ReadMessage(byte[] data)
-        {
-            RunOnSyncCtx(() => MessageReceived?.Invoke(this, new MessageReceivedEventArgs(data)));
-        }
-
-        private sealed class RawDynamicVirtualClientChannelFactory : IDynamicVirtualClientChannelFactory
-        {
-            public string ChannelName { get; }
-
-            private readonly Action<RawDynamicVirtualClientChannel> HandleNewChannel;
-            private readonly SynchronizationContext SyncCtx;
-
-            public RawDynamicVirtualClientChannelFactory(string channelName, Action<RawDynamicVirtualClientChannel> handleNewChannel, SynchronizationContext syncCtx)
-            {
-                this.ChannelName = channelName;
-                this.HandleNewChannel = handleNewChannel;
-                this.SyncCtx = syncCtx;
+                catch (Exception ex)
+                {
+                    DynamicVirtualClientApplication.Log($"Uncaught exception in ReadMessage: {ex}");
+                }
             }
 
-            public IDynamicVirtualClientChannel CreateChannel(DynamicVirtualChannelWriteCallback writeCallback, Action closeCallback)
+            // Called from COM
+            void IWTSVirtualChannelCallback.OnClose()
             {
-                var newChannel = new RawDynamicVirtualClientChannel(ChannelName, writeCallback, closeCallback, SyncCtx);
-                HandleNewChannel(newChannel);
-                return newChannel;
+                try
+                {
+                    if (Parent.isDisposed)
+                    {
+                        return;
+                    }
+                    Parent.isDisconnected = true;
+
+                    Parent.Dispose();
+                    Parent.Disconnected?.Invoke(this, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    DynamicVirtualClientApplication.Log($"Uncaught exception in OnClose: {ex}");
+                }
             }
-        }
-    }
 
-    public sealed class CloseReceivedEventArgs : EventArgs
-    {
-        public bool Handled { get; set; }
-    }
+            // Called from parent
+            public unsafe void WriteMessage(byte[] data, int offset, int count)
+            {
+                if (offset < 0 || offset >= data.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+                }
+                if (count < 0 || count + offset > data.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(count));
+                }
 
-    public sealed class MessageReceivedEventArgs : EventArgs
-    {
-        public byte[] Message { get; }
+                fixed (byte* pData = data)
+                {
+                    IntPtr pStart = (IntPtr)(pData + offset);
+                    NativeChannel.Write((uint)count, pStart, IntPtr.Zero);
+                }
+            }
 
-        public MessageReceivedEventArgs(byte[] message)
-        {
-            this.Message = message;
+            // Called from parent
+            public void CloseWriteChannel()
+            {
+                if (NativeChannel == null)
+                {
+                    throw new ObjectDisposedException(nameof(NativeChannel));
+                }
+
+                NativeChannel.Close();
+                NativeChannel = null;
+            }
         }
     }
 }

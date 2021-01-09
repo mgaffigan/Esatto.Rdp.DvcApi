@@ -1,4 +1,5 @@
 ﻿using Esatto.Win32.Com;
+using Esatto.Win32.Rdp.DvcApi;
 using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
 using System;
@@ -16,10 +17,10 @@ namespace TestApp.Raw.OnRdpClient
         static void Main(string[] args)
         {
             DynamicVirtualClientApplication.Run(args,
-                new[] { RawDynamicVirtualClientChannel.Create("TEST1", HandleTest1) });
+                new Dictionary<string, Action<IAsyncDvcChannel>> { { "TEST1", HandleTest2 } });
         }
 
-        private static async void HandleTest1(AsyncDynamicVirtualClientChannel obj)
+        private static async void HandleTest1(IAsyncDvcChannel obj)
         {
             await obj.SendMessageAsync(Encoding.UTF8.GetBytes("Connected"));
             while (true)
@@ -30,15 +31,11 @@ namespace TestApp.Raw.OnRdpClient
             }
         }
 
-        private static async void HandleTest1(RawDynamicVirtualClientChannel obj)
+        private static async void HandleTest2(IAsyncDvcChannel obj)
         {
             Console.WriteLine($"{obj.GetHashCode():x8}\tConnected");
-            obj.SenderDisconnected += (_2, e) => Console.WriteLine($"{obj.GetHashCode():x8}\tDisconnected {e}");
-            obj.Exception += (_1, e) => Console.WriteLine($"{obj.GetHashCode():x8}\tException on background thread: {e.ExceptionObject}");
-            obj.MessageReceived += (_1, e) =>
-            {
-                Console.WriteLine($"{obj.GetHashCode():x8}\t > " + Encoding.UTF8.GetString(e.Message));
-            };
+            obj.Disconnected += (_2, e) => Console.WriteLine($"{obj.GetHashCode():x8}\tDisconnected");
+            ReceiveAsync(obj);
 
             try
             {
@@ -51,6 +48,14 @@ namespace TestApp.Raw.OnRdpClient
             catch (Exception ex)
             {
                 Console.WriteLine($"{obj.GetHashCode():x8}\tCannot reply {ex}");
+            }
+        }
+
+        private static async void ReceiveAsync(IAsyncDvcChannel obj)
+        {
+            while (true)
+            {
+                Console.WriteLine($"{obj.GetHashCode():x8}\t > " + Encoding.UTF8.GetString(await obj.ReadMessageAsync()));
             }
         }
     }

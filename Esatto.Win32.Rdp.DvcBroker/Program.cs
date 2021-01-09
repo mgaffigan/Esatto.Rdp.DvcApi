@@ -22,7 +22,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                     if (args[0].Equals("/i", StringComparison.CurrentCultureIgnoreCase)
                         || args[0].Equals("/install", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        DvcMessageLoop.Register(Guid.Parse(DvcBrokerConstants.PluginClsid), 
+                        DvcMessageLoop.Register(Guid.Parse(DvcBrokerConstants.PluginClsid),
                             DvcBrokerConstants.PluginProgId, startCommand);
 
                         return;
@@ -42,8 +42,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
             else
             {
                 var broker = new ChannelBroker();
-                var plugin = RawDynamicVirtualClientChannel.Create("ESBR", broker.AcceptConnection);
-                Application.Run(new BrokerMessageLoop(plugin, broker));
+                Application.Run(new BrokerMessageLoop(broker.AcceptConnection, broker));
             }
         }
 
@@ -66,8 +65,9 @@ Server metadata:
 
     class BrokerMessageLoop : DvcMessageLoop
     {
-        public BrokerMessageLoop(IDynamicVirtualClientChannelFactory brokerFactory, ChannelBroker targetBroker)
-            : base(new[] { brokerFactory }, Guid.Parse(DvcBrokerConstants.PluginClsid), false)
+        public BrokerMessageLoop(Action<IAsyncDvcChannel> acceptHandler, ChannelBroker targetBroker)
+            : base(new Dictionary<string, Action<IAsyncDvcChannel>>() { { DvcBrokerConstants.BrokerChannelName, acceptHandler } },
+                Guid.Parse(DvcBrokerConstants.PluginClsid), false)
         {
             this.BrokerRegistration = new ClassObjectRegistration(Guid.Parse(DvcBrokerConstants.BrokerClsid),
                 CreateClassFactoryFor(() => targetBroker), CLSCTX.LOCAL_SERVER, REGCLS.MULTIPLEUSE | REGCLS.SUSPENDED);

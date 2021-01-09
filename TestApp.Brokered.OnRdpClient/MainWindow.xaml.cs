@@ -1,4 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
+﻿using Esatto.Win32.Rdp.DvcApi;
+using Esatto.Win32.Rdp.DvcApi.Broker;
 using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Collections.Generic;
@@ -24,32 +25,52 @@ namespace TestApp.Brokered.OnRdpClient
     public partial class MainWindow : Window
     {
         private BrokeredServiceRegistration ServiceRegistration;
-        private IRawDvcChannel target;
+        private IAsyncDvcChannel target;
 
         public MainWindow()
         {
             InitializeComponent();
             this.Title = Guid.NewGuid().ToString().Substring(0, 6);
-            this.ServiceRegistration = new BrokeredServiceRegistration(Title, AcceptConnection);
+            this.ServiceRegistration = new BrokeredServiceRegistration(Title, c => AcceptConnection(c));
         }
 
-        private void AcceptConnection(IRawDvcChannel obj)
+        private void AcceptConnection(IAsyncDvcChannel obj)
         {
             this.target = obj;
-            obj.MessageReceived += (_1, e) =>
+            Dispatcher.Invoke(() =>
             {
-                Dispatcher.Invoke(() =>
-                {
-                    listBox.Items.Add(Encoding.UTF8.GetString(e.Message));
-                });
-            };
-            obj.SenderDisconnected += (_1, e) =>
+                ReadAsync(obj);
+            });
+            obj.Disconnected += (_1, e) =>
             {
                 Dispatcher.Invoke(() =>
                 {
                     listBox.Items.Add("Disconnected");
                 });
             };
+        }
+
+        private async void ReadAsync(IAsyncDvcChannel obj)
+        {
+            try
+            {
+                while (true)
+                {
+                    listBox.Items.Add(Encoding.UTF8.GetString(await obj.ReadMessageAsync()));
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                listBox.Items.Add("Ending read due to cancelled");
+            }
+            catch (ObjectDisposedException)
+            {
+                listBox.Items.Add("Ending read due to ODE");
+            }
+            catch (DvcChannelDisconnectedException)
+            {
+                listBox.Items.Add("Ending read due to disconnected");
+            }
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -60,7 +81,8 @@ namespace TestApp.Brokered.OnRdpClient
 
         private void _bt_Click(object sender, RoutedEventArgs e)
         {
-            target?.SendMessage(Encoding.UTF8.GetBytes(textBox.Text));
+            var rs = Encoding.UTF8.GetBytes(textBox.Text);
+            target?.SendMessage(rs, 0, rs.Length);
         }
     }
 }

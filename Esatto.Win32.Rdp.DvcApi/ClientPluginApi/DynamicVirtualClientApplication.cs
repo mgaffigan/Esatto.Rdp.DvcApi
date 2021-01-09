@@ -14,9 +14,11 @@ using System.Windows.Forms;
 
 namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 {
+    // Runs on RDS Client
+    // Wrapper to minimize Program.cs in plugin applications
     public sealed class DynamicVirtualClientApplication
     {
-        public static void Run(string[] args, params IDynamicVirtualClientChannelFactory[] channelHosts)
+        public static void Run(string[] args, Dictionary<string, Action<IAsyncDvcChannel>> channelHosts)
             => Run(args, channelHosts,
                 wtsPluginClsid: GetEntryAssemblyGuid(),
                 wtsPluginProgID: Assembly.GetEntryAssembly().GetName().Name + ".WtsPlugin",
@@ -37,7 +39,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             Console.Error.WriteLine(text);
         }
 
-        public static void Run(string[] args, IEnumerable<IDynamicVirtualClientChannelFactory> channelHosts, Guid wtsPluginClsid, string wtsPluginProgID, string startCommand)
+        public static void Run(string[] args, Dictionary<string, Action<IAsyncDvcChannel>> channelHosts, Guid wtsPluginClsid, string wtsPluginProgID, string startCommand)
         {
             Contract.Requires(args != null);
             Contract.Requires(channelHosts.Any());
@@ -45,11 +47,11 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             Contract.Requires(startCommand != null);
 
             // clone array to avoid changes
-            var chfs = channelHosts.ToArray(); channelHosts = chfs;
-            foreach (var chf in chfs)
+            channelHosts = new Dictionary<string, Action<IAsyncDvcChannel>>(channelHosts);
+            foreach (var chf in channelHosts)
             {
-                Contract.Requires(chf != null);
-                TSVirtualChannels.NativeMethods.ValidateChannelName(chf.ChannelName);
+                Contract.Requires(chf.Value != null);
+                TSVirtualChannels.NativeMethods.ValidateChannelName(chf.Key);
             }
 
             if (args.Any(a => !a.Equals("-Embedding", StringComparison.InvariantCultureIgnoreCase)))
@@ -77,7 +79,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
             else
             {
-                Application.Run(new DvcMessageLoop(chfs, wtsPluginClsid));
+                Application.Run(new DvcMessageLoop(channelHosts, wtsPluginClsid));
             }
         }
 

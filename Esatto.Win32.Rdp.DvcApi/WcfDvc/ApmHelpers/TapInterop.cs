@@ -24,7 +24,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 else if (t.IsCanceled)
                     tcs.TrySetCanceled();
                 else
-                    tcs.TrySetResult(t.Result);
+                    tcs.TrySetResult(t.GetResultOrException());
 
                 if (callback != null)
                     callback(tcs.Task);
@@ -61,8 +61,8 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         public static IAsyncResult Run(AsyncCallback callback, object state, Func<Task> actor) => actor().AsApm(callback, state);
         public static IAsyncResult Run<TResult>(AsyncCallback callback, object state, Func<Task<TResult>> actor) => actor().AsApm(callback, state);
 
-        public static void Complete(IAsyncResult iar) => ((Task)iar).Wait();
+        public static void Complete(IAsyncResult iar) => ((Task)iar).WaitOrException();
 
-        public static TResult Complete<TResult>(IAsyncResult iar) => ((Task<TResult>)iar).Result;
+        public static TResult Complete<TResult>(IAsyncResult iar) => ((Task<TResult>)iar).GetResultOrException();
     }
 }

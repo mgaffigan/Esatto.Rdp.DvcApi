@@ -1,4 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.SessionHostApi;
+﻿using Esatto.Win32.Rdp.DvcApi;
+using Esatto.Win32.Rdp.DvcApi.SessionHostApi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +12,13 @@ namespace TestApp.Raw.OnTerminalServer
     {
         static async Task Main(string[] args)
         {
-            var dvc = DynamicVirtualServerChannel.Open("ESBR"); //"ECHO");
+            IAsyncDvcChannel dvc = DynamicVirtualServerChannel.Open("ESBR"); //"ECHO");
             var resp = ReadAsync(dvc);
             while (true)
             {
                 var cb = Encoding.UTF8.GetBytes(Console.ReadLine());
                 if (cb.Length == 0) break;
-                await dvc.WritePacketAsync(cb, 0, cb.Length);
+                await dvc.SendMessageAsync(cb, 0, cb.Length);
             }
 
             Console.WriteLine("Shutting down.");
@@ -37,11 +38,11 @@ namespace TestApp.Raw.OnTerminalServer
             }
         }
 
-        private static async Task ReadAsync(DynamicVirtualServerChannel dvc)
+        private static async Task ReadAsync(IAsyncDvcChannel dvc)
         {
             while (true)
             {
-                var packet = await dvc.ReadPacketAsync();
+                var packet = await dvc.ReadMessageAsync();
 
                 Console.WriteLine("> " + Encoding.UTF8.GetString(packet));
             }

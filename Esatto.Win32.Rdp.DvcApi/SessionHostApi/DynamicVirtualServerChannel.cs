@@ -1,4 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -8,16 +9,19 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static Esatto.Win32.Rdp.DvcApi.TSVirtualChannels.NativeMethods;
 
 namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
 {
-    public sealed class DynamicVirtualServerChannel : IDisposable
+    public sealed class DynamicVirtualServerChannel : IDisposable, IAsyncDvcChannel
     {
         private readonly WtsVitrualChannelSafeHandle Channel;
         private readonly Stream Stream;
         private bool isDisposed;
+
+        public event EventHandler Disconnected;
 
         private DynamicVirtualServerChannel(WtsVitrualChannelSafeHandle channel, Stream baseStream)
         {
@@ -27,14 +31,21 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
 
         public void Dispose()
         {
-            if (isDisposed)
-            {
-                throw new ObjectDisposedException(nameof(DynamicVirtualServerChannel));
-            }
+            AssertAlive();
             isDisposed = true;
 
             this.Stream.Dispose();
             this.Channel.Dispose();
+
+            Disconnected?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void AssertAlive()
+        {
+            if (isDisposed)
+            {
+                throw new ObjectDisposedException(nameof(DynamicVirtualServerChannel));
+            }
         }
 
         public static DynamicVirtualServerChannel Open(string channelName, WTS_CHANNEL_OPTION option = WTS_CHANNEL_OPTION.DYNAMIC)
@@ -87,62 +98,106 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
             return result;
         }
 
-        public async Task<byte[]> ReadPacketAsync()
+        public async Task<byte[]> ReadMessageAsync(CancellationToken ct)
         {
-            var readBuffer = new byte[CHANNEL_PDU_LENGTH];
-            var readBytes = await Stream.ReadAsync(readBuffer, 0, readBuffer.Length);
-            if (readBytes < 1 && isDisposed)
-            {
-                throw new ObjectDisposedException(nameof(DynamicVirtualServerChannel));
-            }
-            if (readBytes < CHANNEL_PDU_HEADER_SIZE)
-            {
-                throw new ProtocolViolationException($"Read returned buffer that was too short ({readBytes} bytes)");
-            }
-            var pdu = CHANNEL_PDU_HEADER.FromBuffer(readBuffer, 0);
-            if (!pdu.flags.HasFlag(CHANNEL_FLAG.First))
-            {
-                throw new ProtocolViolationException($"PDU received with flags {pdu.flags} when FIRST was expected");
-            }
+            AssertAlive();
 
-            var totalLength = pdu.length;
-            var msResult = new MemoryStream(pdu.length);
-            msResult.Write(readBuffer, CHANNEL_PDU_HEADER_SIZE, readBytes - CHANNEL_PDU_HEADER_SIZE);
-
-            // 2..n
-            while (msResult.Position < totalLength)
+            try
             {
-                readBytes = await Stream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                var readBuffer = new byte[CHANNEL_PDU_LENGTH];
+                var readBytes = await Stream.ReadAsync(readBuffer, 0, readBuffer.Length, ct).ConfigureAwait(false);
+                if (readBytes < 1)
+                {
+                    throw new DvcChannelDisconnectedException();
+                }
                 if (readBytes < CHANNEL_PDU_HEADER_SIZE)
                 {
                     throw new ProtocolViolationException($"Read returned buffer that was too short ({readBytes} bytes)");
                 }
-                pdu = CHANNEL_PDU_HEADER.FromBuffer(readBuffer, 0);
-                if (pdu.flags.HasFlag(CHANNEL_FLAG.First))
+                var pdu = CHANNEL_PDU_HEADER.FromBuffer(readBuffer, 0);
+                if (!pdu.flags.HasFlag(CHANNEL_FLAG.First))
                 {
-                    throw new ProtocolViolationException($"PDU received with flags {pdu.flags} when MIDDLE/LAST was expected");
+                    throw new ProtocolViolationException($"PDU received with flags {pdu.flags} when FIRST was expected");
                 }
 
+                var totalLength = pdu.length;
+                var msResult = new MemoryStream(pdu.length);
                 msResult.Write(readBuffer, CHANNEL_PDU_HEADER_SIZE, readBytes - CHANNEL_PDU_HEADER_SIZE);
 
-                if (pdu.flags.HasFlag(CHANNEL_FLAG.Last))
+                // 2..n
+                while (msResult.Position < totalLength)
                 {
-                    break;
-                }
-            }
-            if (msResult.Position != totalLength)
-            {
-                throw new ProtocolViolationException($"PDU declared length {totalLength} but {msResult.Position} bytes were received");
-            }
+                    // Allowing cancellation here would result in a protocol violation
+                    readBytes = await Stream.ReadAsync(readBuffer, 0, readBuffer.Length).ConfigureAwait(false);
+                    if (readBytes < CHANNEL_PDU_HEADER_SIZE)
+                    {
+                        throw new ProtocolViolationException($"Read returned buffer that was too short ({readBytes} bytes)");
+                    }
+                    pdu = CHANNEL_PDU_HEADER.FromBuffer(readBuffer, 0);
+                    if (pdu.flags.HasFlag(CHANNEL_FLAG.First))
+                    {
+                        throw new ProtocolViolationException($"PDU received with flags {pdu.flags} when MIDDLE/LAST was expected");
+                    }
 
-            // ret
-            return msResult.ToArray();
+                    msResult.Write(readBuffer, CHANNEL_PDU_HEADER_SIZE, readBytes - CHANNEL_PDU_HEADER_SIZE);
+
+                    if (pdu.flags.HasFlag(CHANNEL_FLAG.Last))
+                    {
+                        break;
+                    }
+                }
+                if (msResult.Position != totalLength)
+                {
+                    throw new ProtocolViolationException($"PDU declared length {totalLength} but {msResult.Position} bytes were received");
+                }
+
+                // ret
+                var result = msResult.ToArray();
+                //System.IO.File.WriteAllBytes($"n{i++}_read.txt", result);
+                return result;
+            }
+            catch (IOException ex) when (ex.HResult == unchecked((int)0x800700e9) /* HR ERROR_PIPE_NOT_CONNECTED */)
+            {
+                throw new DvcChannelDisconnectedException();
+            }
         }
 
-        public async Task WritePacketAsync(byte[] data, int offset, int count)
+        //static int i = 0;
+
+        public byte[] ReadMessage(CancellationToken ct) => ReadMessageAsync(ct).GetResultOrException();
+
+        public async Task SendMessageAsync(byte[] data, int offset, int count)
         {
-            await Stream.WriteAsync(data, offset, count);
-            await Stream.FlushAsync();
+            AssertAlive();
+
+            try
+            {
+                await Stream.WriteAsync(data, offset, count);
+                await Stream.FlushAsync();
+            }
+            catch (IOException ex) when (ex.HResult == unchecked((int)0x800700e9) /* HR ERROR_PIPE_NOT_CONNECTED */)
+            {
+                throw new DvcChannelDisconnectedException();
+            }
+        }
+
+        public void SendMessage(byte[] data, int offset, int count)
+        {
+            AssertAlive();
+
+            try
+            {
+                //using (var f = File.Create($"n{i++}_write.txt"))
+                //{
+                //    f.Write(data, offset, count);
+                //}
+                Stream.Write(data, offset, count);
+                Stream.Flush();
+            }
+            catch (IOException ex) when (ex.HResult == unchecked((int)0x800700e9) /* HR ERROR_PIPE_NOT_CONNECTED */)
+            {
+                throw new DvcChannelDisconnectedException();
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
-using System;
+﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Esatto.Win32.Rdp.DvcApi.Broker
@@ -8,15 +7,47 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
     internal class ConnectionProxy : IDisposable
     {
         private readonly string ServiceName;
-        private readonly RawDynamicVirtualClientChannel Connection;
+        private readonly IAsyncDvcChannel Connection;
         private IBrokeredDvcChannelServiceInstance Target;
         public IBrokeredDvcChannelConnection CallbackProxy { get; }
 
-        public ConnectionProxy(string serviceName, RawDynamicVirtualClientChannel connection)
+        private bool isDisposed;
+        private Task ReadThread;
+
+        public ConnectionProxy(string serviceName, IAsyncDvcChannel connection)
         {
             this.ServiceName = serviceName;
             this.Connection = connection;
             this.CallbackProxy = new ClientCallbackProxy(this);
+            this.ReadThread = RunReadThread();
+        }
+
+        private async Task RunReadThread()
+        {
+            try
+            {
+                while (true)
+                {
+                    var message = await Connection.ReadMessageAsync().ConfigureAwait(false);
+                    Target.HandleMessage(message);
+                }
+            }
+            catch (ObjectDisposedException) { /* no-op */ }
+            catch (OperationCanceledException) { /* no-op */ }
+            catch (DvcChannelDisconnectedException) { /* no-op */ }
+            catch (COMException ex) when (ex.HResult == unchecked((int)0x800706ba) /* RPC_S_SERVER_UNAVAILABLE */)
+            {
+                Logger.Error(ex, "Service process has exited");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Could not notify service of a new message");
+            }
+
+            // Since this would otherwise cause a deadlock since we'd be waiting on our own thread
+            ReadThread = Task.CompletedTask;
+            // no-op if already disposing
+            Dispose();
         }
 
         internal void SetHandler(IBrokeredDvcChannelServiceInstance target)
@@ -27,17 +58,10 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
             }
 
             this.Target = target;
-            Connection.MessageReceived += this.Connection_MessageReceived;
-            Connection.SenderDisconnected += this.Connection_SenderDisconnected;
-            Connection.Exception += this.Connection_Exception;
+            Connection.Disconnected += this.Connection_SenderDisconnected;
         }
 
-        private void Connection_Exception(object sender, UnhandledExceptionEventArgs e)
-        {
-            Logger.Error((Exception)e.ExceptionObject, "Exception on read thread");
-        }
-
-        private void Connection_SenderDisconnected(object sender, CloseReceivedEventArgs e)
+        private void Connection_SenderDisconnected(object sender, EventArgs e)
         {
             try
             {
@@ -49,21 +73,32 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
             }
         }
 
-        private void Connection_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            try
-            {
-                Target.HandleMessage(e.Message);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not notify service of a new message");
-            }
-        }
-
         public void Dispose()
         {
-            Connection.Close();
+            if (isDisposed)
+            {
+                return;
+            }
+            isDisposed = true;
+
+            try
+            {
+                Connection.Dispose();
+            }
+            catch (ObjectDisposedException) { /* no-op */ }
+            catch (DvcChannelDisconnectedException) { /* no-op */ }
+
+            try
+            {
+                ReadThread.Wait();
+            }
+            catch (AggregateException ae) 
+                when (ae.InnerException is ObjectDisposedException
+                    || ae.InnerException is DvcChannelDisconnectedException
+                    || ae.InnerException is TaskCanceledException) 
+            { 
+                // no-op, should throw on dispose or disconnect
+            }
         }
 
         private class ClientCallbackProxy : IBrokeredDvcChannelConnection

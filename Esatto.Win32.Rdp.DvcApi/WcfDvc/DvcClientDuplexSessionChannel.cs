@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Esatto.Win32.Rdp.DvcApi.Broker;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
@@ -19,13 +21,10 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
         protected override void OnOpen(TimeSpan timeout)
         {
-            var targetAddress = HyperVSocketEndPoint.Parse(Via);
             try
             {
-                var socket = new Socket(AF_HYPERV, SocketType.Stream, HV_PROTOCOL_RAW);
-                socket.Connect(targetAddress);
-
-                base.InitializeSocket(socket);
+                var ct = GetCancellationTokenForTimeout(timeout);
+                base.InitializeSocket(BrokeredServiceClient.ConnectAsync(Via.PathAndQuery, ct).GetResultOrException());
             }
             catch (SocketException socketException)
             {
@@ -39,13 +38,10 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         {
             return Tap.Run(callback, state, async () =>
             {
-                var targetAddress = HyperVSocketEndPoint.Parse(Via);
                 try
                 {
-                    var socket = new Socket(AF_HYPERV, SocketType.Stream, HV_PROTOCOL_RAW);
-                    await socket.ConnectAsync(targetAddress);
-
-                    base.InitializeSocket(socket);
+                    var ct = GetCancellationTokenForTimeout(timeout);
+                    base.InitializeSocket(await BrokeredServiceClient.ConnectAsync(Via.PathAndQuery, ct));
                 }
                 catch (SocketException socketException)
                 {

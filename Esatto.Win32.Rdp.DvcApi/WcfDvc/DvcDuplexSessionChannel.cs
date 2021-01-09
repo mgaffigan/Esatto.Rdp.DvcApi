@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+using System;
 using System.Net.Sockets;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
@@ -11,18 +13,13 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
     {
         int maxBufferSize;
         BufferManager bufferManager;
-        Socket socket;
+        IAsyncDvcChannel channel;
         object readLock = new object();
         object writeLock = new object();
 
         public EndpointAddress RemoteAddress { get; }
 
         public Uri Via { get; }
-
-        public static byte[] WseEndRecord = {
-                    0x0A, 0x40, 0, 0, // version 0x01+ME, no type, no options
-                    0, 0, 0, 0, 0, 0, 0, 0 }; // no lengths
-
 
         protected MessageEncoder MessageEncoder { get; }
 
@@ -44,14 +41,14 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
             this.maxBufferSize = maxBufferSize;
         }
 
-        protected void InitializeSocket(Socket socket)
+        protected void InitializeSocket(IAsyncDvcChannel socket)
         {
-            if (this.socket != null)
+            if (this.channel != null)
             {
                 throw new InvalidOperationException("Socket is already set");
             }
 
-            this.socket = socket;
+            this.channel = socket;
         }
 
         protected static Exception ConvertSocketException(SocketException socketException, string operation)
@@ -87,7 +84,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 try
                 {
                     var encodedBytes = EncodeMessage(message);
-                    WriteData(encodedBytes);
+                    channel.SendMessage(encodedBytes.Array, encodedBytes.Offset, encodedBytes.Count);
                 }
                 catch (SocketException socketException)
                 {
@@ -104,46 +101,20 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
             base.ThrowIfDisposedOrNotOpen();
             var encodedBytes = this.EncodeMessage(message);
 
-            return Tap.Run(callback, state, async () =>
+            return Tap.Run(callback, state, () => Task.Run(() =>
             {
                 try
                 {
-                    await WriteDataAsync(encodedBytes);
+                    channel.SendMessage(encodedBytes.Array, encodedBytes.Offset, encodedBytes.Count);
                 }
                 catch (SocketException socketException)
                 {
                     throw ConvertSocketException(socketException, "Receive");
                 }
-            });
+            }));
         }
 
         public void EndSend(IAsyncResult result) => Tap.Complete(result);
-
-        void SocketSend(byte[] buffer) => SocketSend(new ArraySegment<byte>(buffer));
-
-        void SocketSend(ArraySegment<byte> buffer)
-        {
-            try
-            {
-                socket.Send(buffer.Array, buffer.Offset, buffer.Count, SocketFlags.None);
-            }
-            catch (SocketException socketException)
-            {
-                throw ConvertSocketException(socketException, "Send");
-            }
-        }
-
-        private async Task SocketSendAsync(ArraySegment<byte> buffer)
-        {
-            try
-            {
-                await socket.SendAsync(buffer, SocketFlags.None);
-            }
-            catch (SocketException socketException)
-            {
-                throw ConvertSocketException(socketException, "Send");
-            }
-        }
 
         #endregion
 
@@ -161,27 +132,58 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
             {
                 try
                 {
-                    ArraySegment<byte> encodedBytes = ReadData();
+                    var ct = GetCancellationTokenForTimeout(timeout);
+                    var encodedBytes = TakeOwnership(channel.ReadMessage(ct));
                     return DecodeMessage(encodedBytes);
                 }
+                catch (ObjectDisposedException) { /* no-op */ }
+                catch (OperationCanceledException) { /* no-op */ }
+                catch (DvcChannelDisconnectedException) { /* no-op */ }
                 catch (SocketException socketException)
                 {
                     throw ConvertSocketException(socketException, "Receive");
                 }
             }
+
+            // ODE, Cancellation, Disconnection -> end of stream
+            return null;
         }
 
-        private async Task<Message> ReceiveAsync()
+        private async Task<Message> ReceiveAsync(TimeSpan timeout)
         {
             try
             {
-                var data = await ReadDataAsync();
-                return DecodeMessage(data);
+                var ct = GetCancellationTokenForTimeout(timeout);
+                var encodedBytes = TakeOwnership(await channel.ReadMessageAsync(ct));
+                return DecodeMessage(encodedBytes);
             }
+            catch (ObjectDisposedException) { /* no-op */ }
+            catch (OperationCanceledException) { /* no-op */ }
+            catch (DvcChannelDisconnectedException) { /* no-op */ }
             catch (SocketException socketException)
             {
                 throw ConvertSocketException(socketException, "Receive");
             }
+
+            // ODE, Cancellation, Disconnection -> end of stream
+            return null;
+        }
+
+        protected static CancellationToken GetCancellationTokenForTimeout(TimeSpan timeout)
+        {
+            if (timeout > TimeSpan.FromDays(2))
+            {
+                return default(CancellationToken);
+            }
+
+            return new CancellationTokenSource(timeout).Token;
+        }
+
+        private ArraySegment<byte> TakeOwnership(byte[] data)
+        {
+            var buffer = bufferManager.TakeBuffer(data.Length);
+            Buffer.BlockCopy(data, 0, buffer, 0, data.Length);
+            return new ArraySegment<byte>(buffer, 0, data.Length);
         }
 
         public IAsyncResult BeginReceive(AsyncCallback callback, object state)
@@ -192,7 +194,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         public IAsyncResult BeginReceive(TimeSpan timeout, AsyncCallback callback, object state)
         {
             base.ThrowIfDisposedOrNotOpen();
-            return Tap.Run(callback, state, ReceiveAsync);
+            return Tap.Run(callback, state, () => ReceiveAsync(timeout));
         }
 
         public Message EndReceive(IAsyncResult result)
@@ -216,7 +218,7 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
         {
             base.ThrowIfDisposedOrNotOpen();
 
-            return Tap.Run(callback, state, () => ReceiveAsync());
+            return Tap.Run(callback, state, () => ReceiveAsync(timeout));
         }
 
         public bool EndTryReceive(IAsyncResult result, out Message message)
@@ -231,91 +233,6 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 message = null;
                 return false;
             }
-        }
-
-        #endregion
-
-        #region SocketReceive
-
-        int SocketReceive(byte[] buffer, int offset, int size)
-        {
-            try
-            {
-                return socket.Receive(buffer, offset, size, SocketFlags.None);
-            }
-            catch (SocketException socketException)
-            {
-                throw ConvertSocketException(socketException, "Receive");
-            }
-        }
-
-        private async Task<int> SocketReceiveAsync(byte[] buffer, int offset, int size)
-        {
-            try
-            {
-                return await socket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, size), SocketFlags.None);
-            }
-            catch (SocketException socketException)
-            {
-                throw ConvertSocketException(socketException, "Receive");
-            }
-        }
-
-        #endregion
-
-        #region SocketReceiveBytes
-
-        byte[] SocketReceiveBytes(int size, bool throwOnEmpty = true)
-        {
-            int bytesReadTotal = 0;
-            int bytesRead = 0;
-            byte[] data = bufferManager.TakeBuffer(size);
-
-            while (bytesReadTotal < size)
-            {
-                bytesRead = SocketReceive(data, bytesReadTotal, size - bytesReadTotal);
-                bytesReadTotal += bytesRead;
-                if (bytesRead == 0)
-                {
-                    if (bytesReadTotal == 0 && !throwOnEmpty)
-                    {
-                        bufferManager.ReturnBuffer(data);
-                        return null;
-                    }
-                    else
-                    {
-                        throw new CommunicationException("Premature EOF reached");
-                    }
-                }
-            }
-
-            return data;
-        }
-
-        private async Task<byte[]> SocketReceiveBytesAsync(int size, bool throwOnEmpty = true)
-        {
-            int bytesReadTotal = 0;
-            byte[] data = bufferManager.TakeBuffer(size);
-
-            while (bytesReadTotal < size)
-            {
-                var bytesRead = await SocketReceiveAsync(data, bytesReadTotal, size - bytesReadTotal);
-                bytesReadTotal += bytesRead;
-                if (bytesRead == 0)
-                {
-                    if (bytesReadTotal == 0 && !throwOnEmpty)
-                    {
-                        bufferManager.ReturnBuffer(data);
-                        return null;
-                    }
-                    else
-                    {
-                        throw new CommunicationException("Premature EOF reached");
-                    }
-                }
-            }
-
-            return data;
         }
 
         #endregion
@@ -343,231 +260,6 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 return MessageEncoder.ReadMessage(data, bufferManager);
         }
 
-        void PrepareDummyRead(byte[] preambleBytes, out int idLength, out int typeLength)
-        {
-            // drain the ID + TYPE
-            idLength = (preambleBytes[4] << 8) + preambleBytes[5];
-            typeLength = (preambleBytes[6] << 8) + preambleBytes[7];
-
-            // need to also drain padding
-            if ((idLength % 4) > 0)
-            {
-                idLength += (4 - (idLength % 4));
-            }
-
-            if ((typeLength % 4) > 0)
-            {
-                typeLength += (4 - (typeLength % 4));
-            }
-        }
-
-        int PrepareDataRead(byte[] preambleBytes, out int bytesToRead)
-        {
-            // now read the data itself
-            int dataLength = (preambleBytes[8] << 24)
-                + (preambleBytes[9] << 16)
-                + (preambleBytes[10] << 8)
-                + preambleBytes[11];
-
-            // total to read should include padding
-            bytesToRead = dataLength;
-            if ((dataLength % 4) > 0)
-            {
-                bytesToRead += (4 - (dataLength % 4));
-            }
-            return dataLength;
-        }
-
-        ArraySegment<byte> ReadData()
-        {
-            // 4 bytes for WSE preamble and 8 bytes for lengths
-
-            byte[] preambleBytes = SocketReceiveBytes(12, false);
-            if (preambleBytes == null)
-            {
-                return new ArraySegment<byte>();
-            }
-
-            int idLength, typeLength;
-
-            PrepareDummyRead(preambleBytes, out idLength, out typeLength);
-
-            byte[] dummy = SocketReceiveBytes(idLength + typeLength);
-
-            this.bufferManager.ReturnBuffer(dummy);
-
-            int bytesToRead;
-            int dataLength = PrepareDataRead(preambleBytes, out bytesToRead);
-
-            byte[] data = SocketReceiveBytes(bytesToRead);
-
-            if ((preambleBytes[0] & 0x02) == 0)
-            {
-                byte[] endRecord = SocketReceiveBytes(WseEndRecord.Length);
-                for (int i = 0; i < WseEndRecord.Length; i++)
-                {
-                    if (endRecord[i] != WseEndRecord[i])
-                    {
-                        throw new CommunicationException("Invalid second framing record");
-                    }
-                }
-                this.bufferManager.ReturnBuffer(endRecord);
-            }
-            this.bufferManager.ReturnBuffer(preambleBytes);
-
-            return new ArraySegment<byte>(data, 0, dataLength);
-        }
-
-        async Task<ArraySegment<byte>> ReadDataAsync()
-        {
-            // 4 bytes for WSE preamble and 8 bytes for lengths
-
-            byte[] preambleBytes = await SocketReceiveBytesAsync(12, false);
-            if (preambleBytes == null)
-            {
-                return new ArraySegment<byte>();
-            }
-
-            int idLength, typeLength;
-
-            PrepareDummyRead(preambleBytes, out idLength, out typeLength);
-
-            byte[] dummy = await SocketReceiveBytesAsync(idLength + typeLength);
-
-            this.bufferManager.ReturnBuffer(dummy);
-
-            int bytesToRead;
-            int dataLength = PrepareDataRead(preambleBytes, out bytesToRead);
-
-            byte[] data = await SocketReceiveBytesAsync(bytesToRead);
-
-            if ((preambleBytes[0] & 0x02) == 0)
-            {
-                byte[] endRecord = await SocketReceiveBytesAsync(WseEndRecord.Length);
-                for (int i = 0; i < WseEndRecord.Length; i++)
-                {
-                    if (endRecord[i] != WseEndRecord[i])
-                    {
-                        throw new CommunicationException("Invalid second framing record");
-                    }
-                }
-                this.bufferManager.ReturnBuffer(endRecord);
-            }
-            this.bufferManager.ReturnBuffer(preambleBytes);
-
-            return new ArraySegment<byte>(data, 0, dataLength);
-        }
-
-        private async Task WriteDataAsync(ArraySegment<byte> data)
-        {
-            var buffer = GetPreDataBuffer(data);
-            try
-            {
-                await SocketSendAsync(buffer);
-                await SocketSendAsync(data);
-
-                if ((data.Count % 4) > 0) // need to pad data to multiple of 4 bytes as well
-                {
-                    byte[] padBytes = new byte[4 - (data.Count % 4)];
-                    await SocketSendAsync(new ArraySegment<byte>(padBytes));
-                }
-            }
-            finally
-            {
-                bufferManager.ReturnBuffer(buffer.Array);
-            }
-        }
-
-        void WriteData(ArraySegment<byte> data)
-        {
-            var buffer = GetPreDataBuffer(data);
-            try
-            {
-                SocketSend(buffer);
-                SocketSend(data);
-
-                if ((data.Count % 4) > 0) // need to pad data to multiple of 4 bytes as well
-                {
-                    byte[] padBytes = new byte[4 - (data.Count % 4)];
-                    SocketSend(padBytes);
-                }
-            }
-            finally
-            {
-                bufferManager.ReturnBuffer(buffer.Array);
-            }
-        }
-
-        ArraySegment<byte> GetPreDataBuffer(ArraySegment<byte> data)
-        {
-            byte[] ID = { 0x00, 0x00, 0x00, 0x00 };
-
-            // WSE 3.0 uses the SOAP namespace
-            byte[] WsePreamble = {
-                0x0E, // version 0x01+MB+ME
-                0x20, 0, 0 }; // TYPE_T=URI, no options
-
-            byte[] TYPE;
-
-            if (MessageEncoder.MessageVersion.Envelope == EnvelopeVersion.Soap11)
-            {
-                TYPE = Encoding.UTF8.GetBytes("http://schemas.xmlsoap.org/soap/envelope/");
-            }
-            else
-            {
-                TYPE = Encoding.UTF8.GetBytes("http://www.w3.org/2003/05/soap-envelope");
-            }
-
-            // then get the length fields(8 bytes)
-            byte[] lengthBytes = new byte[] {
-                (byte)((ID.Length & 0x0000FF00) >> 8),
-                (byte)(ID.Length & 0x000000FF),
-                (byte)((TYPE.Length & 0x0000FF00) >> 8),
-                (byte)(TYPE.Length & 0x000000FF),
-                (byte)((data.Count & 0xFF000000) >> 24),
-                (byte)((data.Count & 0x00FF0000) >> 16),
-                (byte)((data.Count & 0x0000FF00) >> 8),
-                (byte)(data.Count & 0x000000FF)
-                };
-
-            // need to pad to multiple of 4 bytes
-            int padLength = 4 - (TYPE.Length % 4);
-
-            int sendLength = TYPE.Length
-                + WsePreamble.Length
-                + lengthBytes.Length
-                + ID.Length
-                + padLength;
-
-            byte[] buffer = bufferManager.TakeBuffer(sendLength);
-            bool success = false;
-            try
-            {
-                int offset = 0;
-                Buffer.BlockCopy(WsePreamble, 0, buffer, offset, WsePreamble.Length);
-                offset += WsePreamble.Length;
-
-                Buffer.BlockCopy(lengthBytes, 0, buffer, offset, lengthBytes.Length);
-                offset += lengthBytes.Length;
-
-                Buffer.BlockCopy(ID, 0, buffer, offset, ID.Length);
-                offset += ID.Length;
-
-                Buffer.BlockCopy(TYPE, 0, buffer, offset, TYPE.Length);
-
-                success = true;
-            }
-            finally
-            {
-                if (!success)
-                {
-                    bufferManager.ReturnBuffer(buffer);
-                }
-            }
-
-            return new ArraySegment<byte>(buffer, 0, sendLength);
-        }
-
         protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state)
         {
             return new CompletedAsyncResult(callback, state);
@@ -584,20 +276,21 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
 
         protected override void OnAbort()
         {
-            if (this.socket != null)
+            try
             {
-                socket.Close(0);
+                channel?.Dispose();
             }
+            catch (ObjectDisposedException) { /* no-op */ }
+            catch (OperationCanceledException) { /* no-op */ }
+            catch (DvcChannelDisconnectedException) { /* no-op */ }
+            channel = null;
         }
 
-        protected override void OnClose(TimeSpan timeout)
-        {
-            socket.Close((int)timeout.TotalMilliseconds);
-        }
+        protected override void OnClose(TimeSpan timeout) => OnAbort();
 
         protected override IAsyncResult OnBeginClose(TimeSpan timeout, AsyncCallback callback, object state)
         {
-            socket.Close((int)timeout.TotalMilliseconds);
+            OnAbort();
             return new CompletedAsyncResult(callback, state);
         }
 
@@ -627,7 +320,6 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 {
                     channel.ThrowIfDisposedOrNotOpen();
                 }
-                channel.socket.Shutdown(SocketShutdown.Send);
             }
 
             public IAsyncResult BeginCloseOutputSession(TimeSpan timeout, AsyncCallback callback, object state)
@@ -651,27 +343,16 @@ namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
                 CloseOutputSession(channel.DefaultCloseTimeout);
             }
 
-
-            public string Id
-            {
-                get { return this.id; }
-            }
-
+            public string Id => this.id;
         }
 
         public IAsyncResult BeginWaitForMessage(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
+            => throw new NotSupportedException("The method or operation is not implemented.");
 
         public bool EndWaitForMessage(IAsyncResult result)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
+            => throw new NotSupportedException("The method or operation is not implemented.");
 
         public bool WaitForMessage(TimeSpan timeout)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
+            => throw new NotSupportedException("The method or operation is not implemented.");
     }
 }

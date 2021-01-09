@@ -3,33 +3,41 @@
 using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
 {
-    sealed class DelegateWtsListenerCallback : IWTSListenerCallback
+    // Runs on RDS Client to accept incomming connections
+    // Thunk from mstsc Plugin to handle a new connection attempt
+    internal sealed class DelegateWtsListenerCallback : IWTSListenerCallback
     {
-        private readonly IDynamicVirtualClientChannelFactory Factory;
+        public string ChannelName { get; }
+        private readonly Action<IAsyncDvcChannel> AcceptChannel;
 
-        public DelegateWtsListenerCallback(IDynamicVirtualClientChannelFactory factory)
+        public DelegateWtsListenerCallback(string channelName, Action<IAsyncDvcChannel> handleAccept)
         {
-            this.Factory = factory;
+            NativeMethods.ValidateChannelName(channelName);
+
+            this.ChannelName = channelName;
+            this.AcceptChannel = handleAccept ?? throw new ArgumentNullException(nameof(handleAccept));
         }
 
-        public void OnNewChannelConnection(IWTSVirtualChannel pChannel,
+        // Called from COM
+        void IWTSListenerCallback.OnNewChannelConnection(IWTSVirtualChannel pChannel,
             [MarshalAs(UnmanagedType.BStr)] string data,
             [MarshalAs(UnmanagedType.Bool)] out bool pAccept, out IWTSVirtualChannelCallback pCallback)
         {
             try
             {
-                var proxy = new DelegateWtsVirtualChannelCallback(pChannel, Factory);
-                proxy.ReadChannel = Factory.CreateChannel(proxy.WriteMessage, proxy.CloseWriteChannel);
+                var channel = new RawDynamicVirtualClientChannel(ChannelName, pChannel);
+                AcceptChannel(channel);
 
                 pAccept = true;
-                pCallback = proxy;
+                pCallback = channel.Proxy;
             }
             catch (Exception ex)
             {
-                DynamicVirtualClientApplication.Log($"Failure while creating client channel for '{Factory.ChannelName}': {ex}");
+                DynamicVirtualClientApplication.Log($"Failure while creating client channel for '{ChannelName}': {ex}");
 
                 pAccept = false;
                 pCallback = null;
