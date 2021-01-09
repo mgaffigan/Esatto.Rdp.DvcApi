@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
+namespace Esatto.Rdp.DvcApi.ClientPluginApi
 {
     // Helper class to convert event based Reads to async reads
     internal sealed class MessageQueue : IDisposable

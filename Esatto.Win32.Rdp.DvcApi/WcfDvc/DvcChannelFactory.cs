@@ -4,7 +4,7 @@ using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     class DvcChannelFactory : ChannelFactoryBase<IDuplexSessionChannel>
     {

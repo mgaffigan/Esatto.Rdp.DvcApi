@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.TSVirtualChannels
+namespace Esatto.Rdp.DvcApi.TSVirtualChannels
 {
     internal static class NativeMethods
     {

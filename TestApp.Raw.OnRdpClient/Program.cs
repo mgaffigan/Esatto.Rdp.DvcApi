@@ -1,7 +1,5 @@
-﻿using Esatto.Win32.Com;
-using Esatto.Win32.Rdp.DvcApi;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
-using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+﻿using Esatto.Rdp.DvcApi;
+using Esatto.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +14,7 @@ namespace TestApp.Raw.OnRdpClient
     {
         static void Main(string[] args)
         {
-            DynamicVirtualClientApplication.Run(args,
-                new Dictionary<string, Action<IAsyncDvcChannel>> { { "TEST1", HandleTest2 } });
+            PluginApplication.Run(args, new Dictionary<string, Action<IAsyncDvcChannel>> { { "TEST1", HandleTest2 } });
         }
 
         private static async void HandleTest1(IAsyncDvcChannel obj)

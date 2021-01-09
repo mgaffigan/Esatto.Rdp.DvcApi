@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     //A strongly typed AsyncResult
     abstract class TypedAsyncResult<T> : AsyncResult

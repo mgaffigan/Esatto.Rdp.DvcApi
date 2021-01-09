@@ -1,5 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi;
-using Esatto.Win32.Rdp.DvcApi.SessionHostApi;
+﻿using Esatto.Rdp.DvcApi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +11,7 @@ namespace TestApp.Raw.OnTerminalServer
     {
         static async Task Main(string[] args)
         {
-            IAsyncDvcChannel dvc = DynamicVirtualServerChannel.Open("ESBR"); //"ECHO");
+            var dvc = DvcServerChannel.Open("ESBR"); //"ECHO");
             var resp = ReadAsync(dvc);
             while (true)
             {

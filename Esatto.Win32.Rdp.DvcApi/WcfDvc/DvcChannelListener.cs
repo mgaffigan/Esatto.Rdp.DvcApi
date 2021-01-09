@@ -1,5 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+﻿using Esatto.Rdp.DvcApi.Broker;
+using Esatto.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -10,7 +10,7 @@ using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     class DvcChannelListener : ChannelListenerBase<IDuplexSessionChannel>
     {

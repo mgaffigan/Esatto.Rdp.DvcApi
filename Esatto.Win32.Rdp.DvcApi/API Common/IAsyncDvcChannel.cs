@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi
+namespace Esatto.Rdp.DvcApi
 {
     public interface IAsyncDvcChannel : IDisposable
     {

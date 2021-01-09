@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker.Properties {
+namespace Esatto.Rdp.Broker.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

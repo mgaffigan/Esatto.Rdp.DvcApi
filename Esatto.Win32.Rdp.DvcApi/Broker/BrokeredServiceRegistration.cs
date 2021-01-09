@@ -1,4 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+﻿using Esatto.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcApi.Broker
 {
     // Runs on RDS Client in Client app (not plugin process)
     public class BrokeredServiceRegistration : IDisposable
@@ -25,7 +25,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                 throw new ArgumentNullException(nameof(acceptConnection));
             }
 
-            var broker = (IDvcChannelBroker)Com.ComInterop.CreateLocalServer(Guid.Parse(DvcBrokerConstants.BrokerClsid));
+            var broker = (IDvcChannelBroker)Win32.Com.ComInterop.CreateLocalServer(Guid.Parse(BrokerConstants.BrokerClsid));
             this.Registration = broker.RegisterService(serviceName, new BrokeredDvcServiceProxy(this));
             this.AcceptConnectionInternal = acceptConnection;
         }
@@ -51,7 +51,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                 }
                 catch (Exception ex)
                 {
-                    DynamicVirtualClientApplication.Log($"Exception accepting connection: {ex}");
+                    PluginApplication.Log($"Exception accepting connection: {ex}");
                     return null;
                 }
             }

@@ -4,7 +4,7 @@ using System.ServiceModel.Channels;
 using System.ServiceModel.Description;
 using System.Xml;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     class DvcBindingElement
         : TransportBindingElement // to signal that we're a transport

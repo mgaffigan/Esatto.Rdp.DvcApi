@@ -1,10 +1,10 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Esatto.Rdp.DvcApi.Broker;
+using Esatto.Rdp.DvcApi;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcBroker
 {
     internal class ServiceRegistration : IDisposable
     {

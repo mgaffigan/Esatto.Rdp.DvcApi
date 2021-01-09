@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Esatto.Win32.Rdp.DvcApi.TSVirtualChannels.NativeMethods;
+using static Esatto.Rdp.DvcApi.TSVirtualChannels.NativeMethods;
 
-namespace Esatto.Win32.Rdp.DvcApi.TSVirtualChannels
+namespace Esatto.Rdp.DvcApi.TSVirtualChannels
 {
     public sealed class WtsAllocSafeHandle : SafeHandleZeroOrMinusOneIsInvalid
     {

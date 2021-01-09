@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker.Properties {
+namespace Esatto.Rdp.Broker.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Esatto.Win32.Rdp.Broker.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Esatto.Rdp.Broker.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

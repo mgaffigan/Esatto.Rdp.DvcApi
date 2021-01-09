@@ -96,9 +96,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Win32.Rdp.DvcApi.csproj">
+    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Rdp.DvcApi.csproj">
       <Project>{b85b0efd-17d0-4d92-acf0-646aa1d1806b}</Project>
-      <Name>Esatto.Win32.Rdp.DvcApi</Name>
+      <Name>Esatto.Rdp.DvcApi</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

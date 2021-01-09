@@ -7,8 +7,8 @@
     <ProjectGuid>{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Esatto.Win32.Rdp.DvcApi</RootNamespace>
-    <AssemblyName>Esatto.Win32.Rdp.DvcApi</AssemblyName>
+    <RootNamespace>Esatto.Rdp.DvcApi</RootNamespace>
+    <AssemblyName>Esatto.Rdp.DvcApi</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -78,23 +78,24 @@
     <Compile Include="..\externs\Com\StaClassFactory.cs">
       <Link>COM Interop %28Externs%29\StaClassFactory.cs</Link>
     </Compile>
+    <Compile Include="API Common\DvcChannel.cs" />
     <Compile Include="API Common\TaskExtensions.cs" />
     <Compile Include="Broker\BrokerConstants.cs" />
     <Compile Include="Broker\BrokeredServiceClient.cs" />
     <Compile Include="Broker\BrokeredServiceRegistration.cs" />
     <Compile Include="Broker\IDvcChannelBroker.cs" />
     <Compile Include="API Common\IAsyncDvcChannel.cs" />
-    <Compile Include="ClientPluginApi\MessageQueue.cs" />
-    <Compile Include="ClientPluginApi\DelegateWtsClientPlugin.cs" />
-    <Compile Include="ClientPluginApi\DelegateWtsListenerCallback.cs" />
+    <Compile Include="API Common\MessageQueue.cs" />
+    <Compile Include="ClientPluginApi\WtsClientPlugin.cs" />
+    <Compile Include="ClientPluginApi\WtsListenerCallback.cs" />
     <Compile Include="API Common\DvcChannelDisconnectedException.cs" />
-    <Compile Include="ClientPluginApi\DvcMessageLoop.cs" />
-    <Compile Include="ClientPluginApi\RawDynamicVirtualClientChannel.cs" />
-    <Compile Include="ClientPluginApi\DynamicVirtualClientApplication.cs" />
+    <Compile Include="ClientPluginApi\PluginMessageLoop.cs" />
+    <Compile Include="ClientPluginApi\DvcClientChannel.cs" />
+    <Compile Include="ClientPluginApi\PluginApplication.cs" />
     <Compile Include="COM Interop %28Externs%29\Contract.cs" />
     <Compile Include="API Common\ChannelNotAvailableException.cs" />
-    <Compile Include="SessionHostApi\DynamicVirtualServerChannel.cs" />
-    <Compile Include="SessionHostApi\ProtocolViolationException.cs" />
+    <Compile Include="SessionHostApi\DvcServerChannel.cs" />
+    <Compile Include="API Common\ProtocolViolationException.cs" />
     <Compile Include="TSVirtualChannels\CHANNEL_FLAG.cs" />
     <Compile Include="TSVirtualChannels\CHANNEL_PDU_HEADER.cs" />
     <Compile Include="TSVirtualChannels\IWTSListener.cs" />

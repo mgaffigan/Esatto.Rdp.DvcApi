@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.TSVirtualChannels
+namespace Esatto.Rdp.DvcApi.TSVirtualChannels
 {
     [ComImport, Guid("A1230201-1439-4e62-a414-190d0ac3d40e"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IWTSPlugin

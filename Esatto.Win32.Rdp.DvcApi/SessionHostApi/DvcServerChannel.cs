@@ -1,5 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
-using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+﻿using Esatto.Rdp.DvcApi.ClientPluginApi;
+using Esatto.Rdp.DvcApi.TSVirtualChannels;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -11,11 +11,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static Esatto.Win32.Rdp.DvcApi.TSVirtualChannels.NativeMethods;
+using static Esatto.Rdp.DvcApi.TSVirtualChannels.NativeMethods;
 
-namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
+namespace Esatto.Rdp.DvcApi
 {
-    public sealed class DynamicVirtualServerChannel : IDisposable, IAsyncDvcChannel
+    public sealed class DvcServerChannel : IDisposable, IAsyncDvcChannel
     {
         private readonly WtsVitrualChannelSafeHandle Channel;
         private readonly Stream Stream;
@@ -23,7 +23,7 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
 
         public event EventHandler Disconnected;
 
-        private DynamicVirtualServerChannel(WtsVitrualChannelSafeHandle channel, Stream baseStream)
+        private DvcServerChannel(WtsVitrualChannelSafeHandle channel, Stream baseStream)
         {
             this.Channel = channel;
             this.Stream = baseStream;
@@ -44,15 +44,15 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
         {
             if (isDisposed)
             {
-                throw new ObjectDisposedException(nameof(DynamicVirtualServerChannel));
+                throw new ObjectDisposedException(nameof(DvcServerChannel));
             }
         }
 
-        public static DynamicVirtualServerChannel Open(string channelName, WTS_CHANNEL_OPTION option = WTS_CHANNEL_OPTION.DYNAMIC)
+        public static IAsyncDvcChannel Open(string channelName, WTS_CHANNEL_OPTION option = WTS_CHANNEL_OPTION.DYNAMIC)
         {
             ValidateChannelName(channelName);
 
-            DynamicVirtualServerChannel result = null;
+            DvcServerChannel result = null;
 
             // Open sfh in a CER since it can't be in a dispose block since lifetime is transferred to DynamicVirtualServerChannel
             RuntimeHelpers.PrepareConstrainedRegions();
@@ -85,7 +85,7 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
                     }
 
                     // create
-                    result = new DynamicVirtualServerChannel(sfh, new FileStream(pFile, FileAccess.ReadWrite, bufferSize: 32 * 1024 * 1024, isAsync: true));
+                    result = new DvcServerChannel(sfh, new FileStream(pFile, FileAccess.ReadWrite, bufferSize: 32 * 1024 * 1024, isAsync: true));
                 }
                 finally
                 {
@@ -152,17 +152,13 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
                 }
 
                 // ret
-                var result = msResult.ToArray();
-                //System.IO.File.WriteAllBytes($"n{i++}_read.txt", result);
-                return result;
+                return msResult.ToArray();
             }
             catch (IOException ex) when (ex.HResult == unchecked((int)0x800700e9) /* HR ERROR_PIPE_NOT_CONNECTED */)
             {
                 throw new DvcChannelDisconnectedException();
             }
         }
-
-        //static int i = 0;
 
         public byte[] ReadMessage(CancellationToken ct) => ReadMessageAsync(ct).GetResultOrException();
 
@@ -187,10 +183,6 @@ namespace Esatto.Win32.Rdp.DvcApi.SessionHostApi
 
             try
             {
-                //using (var f = File.Create($"n{i++}_write.txt"))
-                //{
-                //    f.Write(data, offset, count);
-                //}
                 Stream.Write(data, offset, count);
                 Stream.Flush();
             }

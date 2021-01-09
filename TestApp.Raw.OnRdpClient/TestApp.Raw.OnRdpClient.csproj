@@ -60,9 +60,9 @@
     <None Include="key.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Win32.Rdp.DvcApi.csproj">
+    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Rdp.DvcApi.csproj">
       <Project>{B85B0EFD-17D0-4D92-ACF0-646AA1D1806B}</Project>
-      <Name>Esatto.Win32.Rdp.DvcApi</Name>
+      <Name>Esatto.Rdp.DvcApi</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

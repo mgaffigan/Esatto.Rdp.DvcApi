@@ -1,20 +1,20 @@
 ﻿#define TRACE
 
-using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+using Esatto.Rdp.DvcApi.TSVirtualChannels;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
+namespace Esatto.Rdp.DvcApi.ClientPluginApi
 {
     // Runs on RDS Client to accept incomming connections
     // Thunk from mstsc Plugin to handle a new connection attempt
-    internal sealed class DelegateWtsListenerCallback : IWTSListenerCallback
+    internal sealed class WtsListenerCallback : IWTSListenerCallback
     {
         public string ChannelName { get; }
         private readonly Action<IAsyncDvcChannel> AcceptChannel;
 
-        public DelegateWtsListenerCallback(string channelName, Action<IAsyncDvcChannel> handleAccept)
+        public WtsListenerCallback(string channelName, Action<IAsyncDvcChannel> handleAccept)
         {
             NativeMethods.ValidateChannelName(channelName);
 
@@ -29,7 +29,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
         {
             try
             {
-                var channel = new RawDynamicVirtualClientChannel(ChannelName, pChannel);
+                var channel = new DvcClientChannel(ChannelName, pChannel);
                 AcceptChannel(channel);
 
                 pAccept = true;
@@ -37,7 +37,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
             catch (Exception ex)
             {
-                DynamicVirtualClientApplication.Log($"Failure while creating client channel for '{ChannelName}': {ex}");
+                PluginApplication.Log($"Failure while creating client channel for '{ChannelName}': {ex}");
 
                 pAccept = false;
                 pCallback = null;

@@ -1,4 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+﻿using Esatto.Rdp.DvcApi.TSVirtualChannels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,11 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Contract = Esatto.Win32.Com.Contract;
 
-namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
+namespace Esatto.Rdp.DvcApi.ClientPluginApi
 {
     // Runs on RDS Client
     // Wraps COM channel to provide IAsyncDvcChannel
-    internal sealed class RawDynamicVirtualClientChannel : IAsyncDvcChannel, IDisposable
+    internal sealed class DvcClientChannel : IAsyncDvcChannel, IDisposable
     {
         public string ChannelName { get; }
         private readonly DelegateWtsVirtualChannelCallback _Proxy;
@@ -23,7 +23,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
         private bool isDisconnected;
         public event EventHandler Disconnected;
 
-        internal RawDynamicVirtualClientChannel(string channelName, IWTSVirtualChannel callback)
+        internal DvcClientChannel(string channelName, IWTSVirtualChannel callback)
         {
             this.ReadQueue = new MessageQueue();
             this.ChannelName = channelName;
@@ -83,9 +83,9 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
         private sealed class DelegateWtsVirtualChannelCallback : IWTSVirtualChannelCallback
         {
             private IWTSVirtualChannel NativeChannel;
-            public readonly RawDynamicVirtualClientChannel Parent;
+            public readonly DvcClientChannel Parent;
 
-            public DelegateWtsVirtualChannelCallback(IWTSVirtualChannel pChannel, RawDynamicVirtualClientChannel parent)
+            public DelegateWtsVirtualChannelCallback(IWTSVirtualChannel pChannel, DvcClientChannel parent)
             {
                 this.NativeChannel = pChannel ?? throw new ArgumentNullException(nameof(pChannel));
                 this.Parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -108,7 +108,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
                 }
                 catch (Exception ex)
                 {
-                    DynamicVirtualClientApplication.Log($"Uncaught exception in ReadMessage: {ex}");
+                    PluginApplication.Log($"Uncaught exception in ReadMessage: {ex}");
                 }
             }
 
@@ -128,7 +128,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
                 }
                 catch (Exception ex)
                 {
-                    DynamicVirtualClientApplication.Log($"Uncaught exception in OnClose: {ex}");
+                    PluginApplication.Log($"Uncaught exception in OnClose: {ex}");
                 }
             }
 

@@ -1,7 +1,7 @@
 ﻿#define TRACE
 
 using Esatto.Win32.Com;
-using Esatto.Win32.Rdp.DvcApi.TSVirtualChannels;
+using Esatto.Rdp.DvcApi.TSVirtualChannels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,11 +12,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
+namespace Esatto.Rdp.DvcApi.ClientPluginApi
 {
     // Runs on RDS Client
     // Wrapper to minimize Program.cs in plugin applications
-    public sealed class DynamicVirtualClientApplication
+    public sealed class PluginApplication
     {
         public static void Run(string[] args, Dictionary<string, Action<IAsyncDvcChannel>> channelHosts)
             => Run(args, channelHosts,
@@ -61,14 +61,14 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
                     if (args[0].Equals("/i", StringComparison.CurrentCultureIgnoreCase)
                         || args[0].Equals("/install", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        DvcMessageLoop.Register(wtsPluginClsid, wtsPluginProgID, startCommand);
+                        PluginMessageLoop.Register(wtsPluginClsid, wtsPluginProgID, startCommand);
 
                         return;
                     }
                     else if (args[0].Equals("/u", StringComparison.CurrentCultureIgnoreCase)
                         || args[0].Equals("/uninstall", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        DvcMessageLoop.Unregister(wtsPluginClsid);
+                        PluginMessageLoop.Unregister(wtsPluginClsid);
 
                         return;
                     }
@@ -79,7 +79,7 @@ namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
             }
             else
             {
-                Application.Run(new DvcMessageLoop(channelHosts, wtsPluginClsid));
+                Application.Run(new PluginMessageLoop(channelHosts, wtsPluginClsid));
             }
         }
 

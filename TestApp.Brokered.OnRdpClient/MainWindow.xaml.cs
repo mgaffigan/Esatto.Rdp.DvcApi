@@ -1,6 +1,5 @@
-﻿using Esatto.Win32.Rdp.DvcApi;
-using Esatto.Win32.Rdp.DvcApi.Broker;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+﻿using Esatto.Rdp.DvcApi;
+using Esatto.Rdp.DvcApi.Broker;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

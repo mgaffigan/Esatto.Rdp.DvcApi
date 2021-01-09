@@ -1,4 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
+﻿using Esatto.Rdp.DvcApi.Broker;
 using System;
 using System.Linq;
 using System.Net;
@@ -8,7 +8,7 @@ using System.ServiceModel.Channels;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     class DvcClientDuplexSessionChannel : DvcDuplexSessionChannel
     {

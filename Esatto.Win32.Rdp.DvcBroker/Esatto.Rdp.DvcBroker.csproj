@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{664B2701-262C-42DD-BB5D-F8DB7DE06C7A}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Esatto.Win32.Rdp.Broker</RootNamespace>
-    <AssemblyName>Esatto.Win32.Rdp.DvcBroker</AssemblyName>
+    <RootNamespace>Esatto.Rdp.Broker</RootNamespace>
+    <AssemblyName>Esatto.Rdp.DvcBroker</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -93,9 +93,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Win32.Rdp.DvcApi.csproj">
+    <ProjectReference Include="..\Esatto.Win32.Rdp.DvcApi\Esatto.Rdp.DvcApi.csproj">
       <Project>{b85b0efd-17d0-4d92-acf0-646aa1d1806b}</Project>
-      <Name>Esatto.Win32.Rdp.DvcApi</Name>
+      <Name>Esatto.Rdp.DvcApi</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

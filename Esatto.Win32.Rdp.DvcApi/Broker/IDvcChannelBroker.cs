@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcApi.Broker
 {
     [ComVisible(true)]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

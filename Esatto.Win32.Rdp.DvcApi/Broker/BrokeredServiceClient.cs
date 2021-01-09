@@ -1,24 +1,23 @@
-﻿using Esatto.Win32.Rdp.DvcApi.SessionHostApi;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcApi.Broker
 {
     // Runs on Session Host
     public static class BrokeredServiceClient
     {
-        public static async Task<DynamicVirtualServerChannel> ConnectAsync(string serviceName, CancellationToken ct)
+        public static async Task<IAsyncDvcChannel> ConnectAsync(string serviceName, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(serviceName))
             {
                 throw new ArgumentNullException(nameof(serviceName));
             }
 
-            var channel = await Task.Run(() => DynamicVirtualServerChannel.Open(DvcBrokerConstants.BrokerChannelName)).ConfigureAwait(false);
+            var channel = await Task.Run(() => DvcServerChannel.Open(BrokerConstants.BrokerChannelName)).ConfigureAwait(false);
             try
             {
                 var utf8ServiceName = Encoding.UTF8.GetBytes(serviceName);
@@ -26,7 +25,7 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                 
                 var brokerResponseUtf8 = await channel.ReadMessageAsync(ct).ConfigureAwait(false);
                 var brokerResponse = Encoding.UTF8.GetString(brokerResponseUtf8);
-                if (brokerResponse != DvcBrokerConstants.AcceptedMessage)
+                if (brokerResponse != BrokerConstants.AcceptedMessage)
                 {
                     throw new ChannelNotAvailableException($"Broker refused connection: {brokerResponse}");
                 }

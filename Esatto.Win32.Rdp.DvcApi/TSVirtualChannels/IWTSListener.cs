@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.TSVirtualChannels
+namespace Esatto.Rdp.DvcApi.TSVirtualChannels
 {
     [ComImport, Guid("A1230206-9a39-4d58-8674-cdb4dff4e73b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IWTSListener

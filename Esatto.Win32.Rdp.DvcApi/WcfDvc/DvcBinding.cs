@@ -1,6 +1,6 @@
 ﻿using System.ServiceModel.Channels;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     public class DvcBinding : Binding, IBindingRuntimePreferences
     {

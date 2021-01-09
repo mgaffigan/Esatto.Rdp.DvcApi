@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Esatto.Win32.Rdp.DvcApi
+namespace Esatto.Rdp.DvcApi
 {
     [Serializable]
     public class DvcChannelDisconnectedException : InvalidOperationException

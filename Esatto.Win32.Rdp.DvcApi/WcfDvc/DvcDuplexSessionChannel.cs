@@ -1,4 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+﻿using Esatto.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Net.Sockets;
 using System.ServiceModel;
@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     abstract class DvcDuplexSessionChannel : ChannelBase, IDuplexSessionChannel
     {

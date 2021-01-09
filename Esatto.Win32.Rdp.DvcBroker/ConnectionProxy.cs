@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Esatto.Rdp.DvcApi;
+using Esatto.Rdp.DvcApi.Broker;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcBroker
 {
     internal class ConnectionProxy : IDisposable
     {

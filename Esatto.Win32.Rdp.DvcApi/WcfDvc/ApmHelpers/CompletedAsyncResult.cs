@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Esatto.Win32.Rdp.DvcApi.WcfDvc
+namespace Esatto.Rdp.DvcApi.WcfDvc
 {
     //An AsyncResult that completes as soon as it is instantiated.
     class CompletedAsyncResult : AsyncResult

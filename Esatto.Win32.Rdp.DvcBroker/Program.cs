@@ -1,5 +1,5 @@
 ﻿using Esatto.Win32.Com;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
+using Esatto.Rdp.DvcApi.ClientPluginApi;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Esatto.Win32.Com.ComInterop;
+using static Esatto.Rdp.DvcApi.Broker.BrokerConstants;
+using Esatto.Rdp.DvcApi;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcBroker
 {
     class Program
     {
@@ -22,15 +24,14 @@ namespace Esatto.Win32.Rdp.DvcApi.Broker
                     if (args[0].Equals("/i", StringComparison.CurrentCultureIgnoreCase)
                         || args[0].Equals("/install", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        DvcMessageLoop.Register(Guid.Parse(DvcBrokerConstants.PluginClsid),
-                            DvcBrokerConstants.PluginProgId, startCommand);
+                        PluginMessageLoop.Register(Guid.Parse(PluginClsid), PluginProgId, startCommand);
 
                         return;
                     }
                     else if (args[0].Equals("/u", StringComparison.CurrentCultureIgnoreCase)
                         || args[0].Equals("/uninstall", StringComparison.CurrentCultureIgnoreCase))
                     {
-                        DvcMessageLoop.Unregister(Guid.Parse(DvcBrokerConstants.PluginClsid));
+                        PluginMessageLoop.Unregister(Guid.Parse(PluginClsid));
 
                         return;
                     }
@@ -56,20 +57,20 @@ Usage:
     [no args]   Run the out-of-process server
 
 Server metadata:
-    CLSID:      {DvcBrokerConstants.PluginClsid}
-    ProgID:     {DvcBrokerConstants.PluginProgId}
+    CLSID:      {PluginClsid}
+    ProgID:     {PluginProgId}
     LS32:       {startCommand}
 ");
         }
     }
 
-    class BrokerMessageLoop : DvcMessageLoop
+    class BrokerMessageLoop : PluginMessageLoop
     {
         public BrokerMessageLoop(Action<IAsyncDvcChannel> acceptHandler, ChannelBroker targetBroker)
-            : base(new Dictionary<string, Action<IAsyncDvcChannel>>() { { DvcBrokerConstants.BrokerChannelName, acceptHandler } },
-                Guid.Parse(DvcBrokerConstants.PluginClsid), false)
+            : base(new Dictionary<string, Action<IAsyncDvcChannel>>() { { BrokerChannelName, acceptHandler } },
+                Guid.Parse(PluginClsid), false)
         {
-            this.BrokerRegistration = new ClassObjectRegistration(Guid.Parse(DvcBrokerConstants.BrokerClsid),
+            this.BrokerRegistration = new ClassObjectRegistration(Guid.Parse(BrokerClsid),
                 CreateClassFactoryFor(() => targetBroker), CLSCTX.LOCAL_SERVER, REGCLS.MULTIPLEUSE | REGCLS.SUSPENDED);
             CoResumeClassObjects();
         }

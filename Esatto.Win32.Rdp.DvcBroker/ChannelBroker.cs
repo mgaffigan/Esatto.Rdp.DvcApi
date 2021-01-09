@@ -1,6 +1,4 @@
-﻿using Esatto.Win32.Rdp.DvcApi.Broker;
-using Esatto.Win32.Rdp.DvcApi.ClientPluginApi;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,13 +7,16 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Esatto.Rdp.DvcApi.Broker;
+using static Esatto.Rdp.DvcApi.Broker.BrokerConstants;
+using Esatto.Rdp.DvcApi;
 
-namespace Esatto.Win32.Rdp.DvcApi.Broker
+namespace Esatto.Rdp.DvcBroker
 {
     [ComVisible(true)]
     [ClassInterface(ClassInterfaceType.None)]
-    [Guid(DvcBrokerConstants.BrokerClsid)]
-    [ProgId(DvcBrokerConstants.BrokerProgId)]
+    [Guid(BrokerClsid)]
+    [ProgId(BrokerProgId)]
     // Must be public for regasm
     public class ChannelBroker : IDvcChannelBroker
     {

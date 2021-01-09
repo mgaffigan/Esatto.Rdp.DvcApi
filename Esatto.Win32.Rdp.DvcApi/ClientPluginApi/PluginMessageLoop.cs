@@ -8,20 +8,20 @@ using System.Threading;
 using System.Windows.Forms;
 using static Esatto.Win32.Com.ComInterop;
 
-namespace Esatto.Win32.Rdp.DvcApi.ClientPluginApi
+namespace Esatto.Rdp.DvcApi.ClientPluginApi
 {
     // Runs on RDS Client, message pump for out-of-process plugin
-    public class DvcMessageLoop : ApplicationContext
+    public class PluginMessageLoop : ApplicationContext
     {
         private readonly ClassObjectRegistration PluginRegistration;
 
-        public DvcMessageLoop(Dictionary<string, Action<IAsyncDvcChannel>> registeredChannels, Guid clsid, bool resumeClassObjects = true)
+        public PluginMessageLoop(Dictionary<string, Action<IAsyncDvcChannel>> registeredChannels, Guid clsid, bool resumeClassObjects = true)
         {
             SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
 
             // register COM objects
             this.PluginRegistration = new ClassObjectRegistration(clsid,
-                CreateClassFactoryFor(() => new DelegateWtsClientPlugin(registeredChannels)), CLSCTX.LOCAL_SERVER, REGCLS.MULTIPLEUSE | REGCLS.SUSPENDED);
+                CreateClassFactoryFor(() => new WtsClientPlugin(registeredChannels)), CLSCTX.LOCAL_SERVER, REGCLS.MULTIPLEUSE | REGCLS.SUSPENDED);
             if (resumeClassObjects)
             {
                 CoResumeClassObjects();
