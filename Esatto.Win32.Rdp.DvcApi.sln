@@ -7,6 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Esatto.Rdp.DvcApi", "Esatto
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BD378192-5DA9-46FB-983E-2112F3546F08}"
 	ProjectSection(SolutionItems) = preProject
+		LICENSE.md = LICENSE.md
 		Readme.md = Readme.md
 	EndProjectSection
 EndProject
